@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>군산 강소특구 성과 및 수요조사</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --primary-light: #eef2ff;
+      --accent: #f97316;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --text: #1e293b;
+      --text-light: #475569;
+      --text-muted: #94a3b8;
+      --border: #e2e8f0;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+      --radius: 16px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: linear-gradient(160deg, #eef2ff 0%, #e0e7ff 40%, #c7d2fe 100%);
+      min-height: 100vh;
+      padding: 24px 16px;
+      line-height: 1.6;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+
+    /* 스텝 인디케이터 */
+    .step-bar { display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 8px; }
+    .step-dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(79,70,229,0.12); color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 600; transition: all 0.3s;
+      border: 2px solid transparent;
+    }
+    .step-dot.active { background: var(--primary); color: #fff; transform: scale(1.15); box-shadow: 0 2px 8px rgba(79,70,229,0.3); }
+    .step-dot.done { background: var(--success); color: #fff; }
+    .step-line { width: 20px; height: 2px; background: rgba(79,70,229,0.15); }
+    .step-line.done { background: var(--success); }
+    .step-label { color: var(--text-light); text-align: center; font-size: 0.82rem; margin-bottom: 20px; font-weight: 500; }
+
+    /* 카드 */
+    .card {
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow: hidden;
+      display: none;
+      border: 1px solid rgba(226,232,240,0.8);
+    }
+    .card.active { display: block; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(20px) scale(0.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .card-body { padding: 32px 28px; }
+
+    /* 섹션 헤더 */
+    .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .section-badge { background: var(--primary); color: #fff; font-weight: 700; padding: 8px 16px; border-radius: 10px; font-size: 0.95rem; box-shadow: 0 2px 6px rgba(79,70,229,0.2); }
+    .section-badge.red { background: var(--accent); box-shadow: 0 2px 6px rgba(249,115,22,0.2); }
+    .section-title { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .section-subtitle { color: #dc2626; font-size: 0.9rem; font-weight: 600; }
+
+    /* 질문 */
+    .question { font-size: 0.9rem; font-weight: 500; color: var(--text); margin-bottom: 16px; margin-top: 24px; line-height: 1.6; padding-left: 12px; border-left: 3px solid var(--primary-light); }
+    .question:first-of-type, .section-header + .question { margin-top: 0; }
+    .q-num { color: var(--primary); font-weight: 700; font-size: 0.92rem; margin-right: 3px; }
+
+    /* 사업자번호 조회 */
+    .lookup-box { background: var(--bg); border: 1.5px dashed var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; transition: all 0.3s ease; }
+    .lookup-box.done { background: #f0fdf4; border: 1.5px solid var(--success); }
+    .lookup-row { display: flex; gap: 10px; align-items: center; }
+    .biz-input {
+      flex: 1; max-width: 240px; padding: 10px 14px; border: 2px solid var(--border);
+      border-radius: 8px; font-size: 1rem; text-align: center; letter-spacing: 2px;
+      font-family: inherit; outline: none; transition: border-color 0.2s;
+    }
+    .biz-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); text-align: left;}
+    .msg { font-size: 0.85rem; margin-top: 10px; min-height: 20px; }
+    .msg.error { color: var(--accent); }
+    .msg.success { color: var(--success); font-weight: 600; }
+    .msg.warn { color: var(--warning); }
+    .msg.info { color: var(--primary); }
+
+    /* 사업자번호 배지 */
+    .biz-badge { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); color: #fff; padding: 16px 24px; border-radius: 12px; text-align: center; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(79,70,229,0.2); }
+    .biz-badge .label { font-size: 0.75rem; opacity: 0.85; }
+    .biz-badge .number { font-size: 1.15rem; font-weight: 700; letter-spacing: 2px; }
+
+    /* 테이블 공통 */
+    .info-table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 20px; font-size: 0.85rem; }
+    .info-table th, .info-table td { border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); padding: 12px 14px; text-align: center; }
+    .info-table th:last-child, .info-table td:last-child { border-right: none; }
+    .info-table tr:last-child th, .info-table tr:last-child td { border-bottom: none; }
+    .info-table th { background: var(--bg); font-weight: 600; color: var(--text-light); width: 100px; }
+    .info-table td input, .info-table td textarea {
+      width: 100%; border: 1px solid transparent; background: transparent;
+      text-align: center; font-size: 0.85rem; outline: none; padding: 4px 6px;
+      font-family: inherit; border-radius: 4px;
+    }
+    .info-table td input.editable, .info-table td textarea.editable {
+      border-color: var(--primary); background: #fffbeb;
+    }
+
+    /* 주소 테이블 */
+    .addr-wrap { display: flex; }
+    .addr-type { background: var(--border); padding: 8px 12px; font-weight: 500; width: 50px; text-align: center; border-right: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+    .addr-content { flex: 1; }
+    .addr-main { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    .addr-main input { width: 100%; border: none; background: transparent; font-size: 0.85rem; outline: none; text-align: left; }
+    .addr-contacts { display: flex; }
+    .addr-contact { flex: 1; display: flex; align-items: center; padding: 6px 10px; border-right: 1px solid var(--border); gap: 4px; }
+    .addr-contact:last-child { border-right: none; }
+    .addr-contact label { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; }
+    .addr-contact input { flex: 1; border: none; background: transparent; font-size: 0.8rem; outline: none; text-align: center; min-width: 0; }
+
+    /* 경영현황 테이블 */
+    .data-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.84rem; }
+    .data-table th, .data-table td { border: 1px solid var(--border); padding: 8px 6px; text-align: center; }
+    .data-table th { background: var(--bg); font-weight: 600; }
+    .data-table th.year { background: var(--primary-light); color: var(--primary-dark); }
+    .data-table .item-cell { text-align: left; padding-left: 12px; background: var(--bg); font-weight: 400; }
+    .num-input {
+      width: 52px; max-width: 52px; border: 1.5px solid var(--border);
+      border-radius: 6px; padding: 4px 6px; text-align: right; background: #fff;
+      font-size: 0.8rem; outline: none; font-family: inherit; transition: all 0.2s;
+    }
+    .num-input:focus { border-color: var(--primary); background: #fefce8; box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+    .unit { font-size: 0.72rem; color: var(--text-muted); margin-left: 2px; white-space: nowrap; }
+
+    /* 만족도 테이블 */
+    .rating-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 0.8rem; }
+    .rating-table th, .rating-table td { border: 1px solid var(--border); padding: 9px 6px; text-align: center; }
+    .rating-table th { background: var(--bg); font-weight: 600; }
+    .rating-table th.r-col { width: 56px; min-width: 56px; font-size: 0.78rem; line-height: 1.4; padding: 10px 4px; }
+    .rating-table .item-cell { text-align: left; padding-left: 12px; font-size: 0.85rem; }
+    .rating-table input[type="radio"] { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
+    .rating-table .stage-hdr { background: var(--primary-light); color: var(--primary-dark); font-weight: 600; width: 30px; text-align: center; line-height: 1.2; }
+    .rating-table .sub-hdr { background: var(--bg); font-weight: 500; width: 70px; text-align: center; line-height: 1.3; }
+
+    /* 체크박스/라디오 그룹 */
+    .choice-group { margin-bottom: 18px; }
+    .choice-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 14px 16px; border: 1.5px solid var(--border);
+      border-radius: 10px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s ease;
+    }
+    .choice-item:hover { background: var(--primary-light); border-color: var(--primary); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(79,70,229,0.08); }
+    .choice-item input { width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; margin-top: 2px; accent-color: var(--primary); }
+    .choice-item label { flex: 1; font-size: 0.85rem; color: var(--text); cursor: pointer; line-height: 1.5; }
+
+    /* 조건부 표시 */
+    .cond-box { display: none; margin-top: 14px; padding: 14px; background: #f0f9ff; border-radius: 8px; border-left: 3px solid var(--primary); }
+    .cond-box.show { display: block; }
+    .cond-box label { font-size: 0.85rem; color: var(--primary-dark); font-weight: 500; margin-bottom: 8px; display: block; }
+
+    /* 입력 필드 */
+    .form-input {
+      width: 100%; padding: 10px 12px; border: 2px solid var(--border);
+      border-radius: 8px; font-size: 0.9rem; font-family: inherit; outline: none; transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+    textarea.form-input { resize: vertical; min-height: 70px; }
+
+    /* 버튼 */
+    .btn {
+      padding: 13px 28px; font-size: 0.9rem; font-weight: 600;
+      border: none; border-radius: 10px; cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      font-family: inherit; letter-spacing: 0.01em;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(79,70,229,0.2); }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(79,70,229,0.3); }
+    .btn-secondary { background: var(--bg); color: var(--text-light); border: 1.5px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); border-color: var(--text-muted); }
+    .btn-success { background: var(--success); color: #fff; box-shadow: 0 2px 8px rgba(16,185,129,0.2); }
+    .btn-success:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(16,185,129,0.3); }
+    .btn-edit { background: var(--primary); color: #fff; }
+    .btn-edit.active { background: var(--success); }
+    .btn-lookup { background: var(--primary); color: #fff; padding: 10px 28px; white-space: nowrap; box-shadow: 0 2px 6px rgba(79,70,229,0.2); }
+    .btn-lookup:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,70,229,0.25); }
+    .btn-group { display: flex; gap: 10px; margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--border); }
+    .btn-group .btn { flex: 1; }
+
+    /* 알림 박스 */
+    .notice { background: #fef3c7; border: 1px solid var(--warning); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 0.83rem; color: #92400e; line-height: 1.5; }
+
+    /* 모달 */
+    .modal-bg {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 9999;
+      align-items: center; justify-content: center;
+    }
+    .modal-bg.show { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: 20px; padding: 36px;
+      max-width: 400px; width: 90%; text-align: center;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.12), 0 8px 16px rgba(0,0,0,0.08);
+      animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes modalPop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    .modal-icon { font-size: 2.8rem; margin-bottom: 12px; }
+    .modal-icon.ok { color: var(--success); }
+    .modal-icon.err { color: var(--accent); }
+    .modal-icon.ask { color: var(--primary); }
+    .modal-title { font-size: 1.15rem; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .modal-msg { font-size: 0.9rem; color: var(--text-light); line-height: 1.6; margin-bottom: 22px; white-space: pre-line; }
+    .modal-btns { display: flex; gap: 10px; justify-content: center; }
+    .modal-btn { padding: 12px 32px; border-radius: 10px; font-size: 0.9rem; font-weight: 600; border: none; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+    .modal-btn-ok { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(79,70,229,0.2); }
+    .modal-btn-ok:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,70,229,0.3); }
+    .modal-btn-cancel { background: var(--bg); color: var(--text-light); border: 1.5px solid var(--border); }
+
+    /* 반응형 */
+    @media (max-width: 600px) {
+      body { padding: 12px; }
+      .card-body { padding: 20px 16px; }
+      .step-dot { width: 28px; height: 28px; font-size: 0.7rem; }
+      .step-line { width: 14px; }
+      .section-header { gap: 8px; }
+      .section-badge { font-size: 0.85rem; padding: 6px 12px; }
+      .section-title { font-size: 0.92rem; }
+      .question { font-size: 0.85rem; padding-left: 10px; }
+      .lookup-row { flex-direction: column; align-items: stretch; }
+      .biz-input { max-width: 100%; }
+      .info-table th, .info-table td { padding: 10px 8px; }
+      .data-table, .rating-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+      .num-input { width: 48px; max-width: 48px; font-size: 0.75rem; padding: 3px 4px; }
+      .btn-group { flex-direction: column; gap: 10px; }
+      .btn { padding: 16px 20px; font-size: 0.92rem; }
+      .addr-wrap { flex-direction: column; }
+      .addr-type { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+      .addr-contacts { flex-direction: column; }
+      .addr-contact { border-right: none; border-bottom: 1px solid var(--border); padding: 8px 10px; }
+      .addr-contact:last-child { border-bottom: none; }
+      .choice-item label { font-size: 0.82rem; line-height: 1.5; }
+    }
+    @media (max-width: 380px) {
+      .card-body { padding: 16px 12px; }
+      .rating-table th.r-col { min-width: 44px; width: 44px; font-size: 0.68rem; }
+    }
+
+    .sub-label { display: block; font-size: 0.76rem; color: var(--text-muted); font-weight: normal; }
+    .required::after { content: ' *'; color: #dc2626; font-weight: 700; }
+    .company-area { display: none; }
+    .company-area.show { display: block; animation: slideIn 0.3s ease-out; }
+    .mt-3 { margin-top: 16px; }
+    .mb-3 { margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 스텝 인디케이터 -->
+  <div id="stepBar" class="step-bar"></div>
+  <div id="stepLabel" class="step-label"></div>
+
+  <form id="surveyForm" autocomplete="off">
+
+    <!-- ===== Step 1: 사업자번호 조회 + 기업정보 ===== -->
+    <div id="step1" class="card active">
+      <div class="card-body">
+        <div class="section-header">
+          <span class="section-badge">A</span>
+          <span class="section-title">기업 지원 사업(과제) 현황 및 기업정보</span>
+        </div>
+
+        <div id="lookupBox" class="lookup-box">
+          <p class="question" style="margin-bottom:12px;">사업자등록번호를 입력하고 조회하세요.</p>
+          <div class="lookup-row">
+            <input type="text" id="bizNoInput" class="biz-input" placeholder="000-00-00000" maxlength="12" inputmode="numeric">
+            <button type="button" id="btnLookup" class="btn btn-lookup" onclick="doLookup()">조회</button>
+          </div>
+          <p id="lookupMsg" class="msg"></p>
+        </div>
+
+        <div id="companyArea" class="company-area">
+          <div class="biz-badge">
+            <div class="label">사업자등록번호</div>
+            <div id="dispBizNo" class="number">000-00-00000</div>
+          </div>
+
+          <p class="question"><span class="q-num">A1.</span> 귀사의 개요 정보를 확인하여 주시기 바랍니다.</p>
+
+          <table class="info-table">
+            <tr><th class="required">업체명</th><td><input type="text" id="f_name" name="company_name" readonly></td><th class="required">설립년도</th><td><input type="text" id="f_year" name="found_year" readonly></td></tr>
+            <tr><th class="required">대표자</th><td><input type="text" id="f_ceo" name="ceo" readonly></td><th class="required">업종<span class="sub-label">(한국표준산업분류)</span></th><td><input type="text" id="f_industry" name="industry" readonly></td></tr>
+            <tr><th class="required">사업자<br>등록번호</th><td><input type="text" id="f_bizno" name="biz_no_display" readonly></td><th class="required">법인<br>등록번호</th><td><input type="text" id="f_corpno" name="corp_no" readonly></td></tr>
+          </table>
+
+          <table class="info-table">
+            <tr>
+              <th rowspan="2" style="width:40px;">주소</th>
+              <td style="padding:0;" colspan="3">
+                <div class="addr-wrap">
+                  <div class="addr-type required">본사</div>
+                  <div class="addr-content">
+                    <div class="addr-main"><input type="text" id="f_addrHq" name="addr_hq" readonly></div>
+                    <div class="addr-contacts">
+                      <div class="addr-contact"><label class="required">전화</label><input type="text" id="f_telHq" name="tel_hq" readonly></div>
+                      <div class="addr-contact"><label>Fax</label><input type="text" id="f_faxHq" name="fax_hq" readonly></div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0;" colspan="3">
+                <div class="addr-wrap">
+                  <div class="addr-type">지사</div>
+                  <div class="addr-content">
+                    <div class="addr-main"><input type="text" id="f_addrBranch" name="addr_branch" placeholder="(없으면 공란)" readonly></div>
+                    <div class="addr-contacts">
+                      <div class="addr-contact"><label>전화</label><input type="text" id="f_telBranch" name="tel_branch" readonly></div>
+                      <div class="addr-contact"><label>Fax</label><input type="text" id="f_faxBranch" name="fax_branch" readonly></div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </table>
+
+          <div class="btn-group">
+            <button type="button" id="btnEdit" class="btn btn-edit" onclick="toggleEdit()">정보 수정</button>
+            <button type="button" class="btn btn-primary" onclick="goStep(2)">다음</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Step 2: G2G 여부 + 수혜내역 + 작성자 ===== -->
+    <div id="step2" class="card">
+      <div class="card-body">
+        <div class="section-header">
+          <span class="section-badge">A</span>
+          <span class="section-title">기업 지원 사업(과제) 현황 및 기업정보</span>
+        </div>
+
+        <p class="question"><span class="q-num">A2.</span> 2025년 G2G 시범사업 프로그램에 참여하셨습니까?</p>
+        <div class="choice-group">
+          <div class="choice-item"><input type="radio" name="g2g_flag" value="YES" id="g2g_y"><label for="g2g_y">예 (G2G 참여기업)</label></div>
+          <div class="choice-item"><input type="radio" name="g2g_flag" value="NO" id="g2g_n" checked><label for="g2g_n">아니오 (일반 수혜기업)</label></div>
+        </div>
+
+        <p class="question"><span class="q-num">A3.</span> '21년~'25년도 강소특구 육성사업 수혜내역을 모두 선택해 주세요.<span class="required"></span></p>
+        <div class="choice-group">
+          <div class="choice-item"><input type="checkbox" name="benefit" value="1" id="b1"><label for="b1">양방향기술발굴연계 : 기술이전 지원, 기술이전사업화(R&BD) 참여, 연구소기업 관련</label></div>
+          <div class="choice-item"><input type="checkbox" name="benefit" value="2" id="b2"><label for="b2">이노폴리스캠퍼스사업 : 창업교육 프로그램 참여, 창업지원 컨설팅 등, 창업후속지원 프로그램</label></div>
+          <div class="choice-item"><input type="checkbox" name="benefit" value="3" id="b3"><label for="b3">혁신네트워크 육성사업 : 기술사업화연구회(TBM) 참여, 전시회 참여, 성과발표회 참여 등</label></div>
+          <div class="choice-item"><input type="checkbox" name="benefit" value="4" id="b4"><label for="b4">지역 특성화 육성사업 : Bring-up, Jump-up, Collabo Biz Plus-up, Tech-up, Value-up 기술지원</label></div>
+        </div>
+
+        <p class="question"><span class="q-num">A4.</span> 작성자</p>
+        <table class="info-table">
+          <tr><th class="required">성명 / 직급</th><td><input type="text" name="writer_name"></td></tr>
+          <tr><th class="required">부서명</th><td><input type="text" name="writer_dept"></td></tr>
+          <tr><th class="required">연락처<span class="sub-label">(직통전화 또는 휴대폰)</span></th><td><input type="text" name="writer_phone"></td></tr>
+          <tr><th class="required">이메일</th><td><input type="text" name="writer_email"></td></tr>
+        </table>
+
+        <div class="btn-group">
+          <button type="button" class="btn btn-secondary" onclick="goStep(1)">이전</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(3)">다음</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Step 3: B. 경영현황 ===== -->
+    <div id="step3" class="card">
+      <div class="card-body">
+        <div class="section-header">
+          <span class="section-badge">B</span>
+          <span class="section-title">기업의 경영 및 사업 현황</span>
+        </div>
+
+        <p class="question"><span class="q-num">B1.</span> 귀 사의 경영 현황에 대해 응답해 주십시오.<span class="required"></span></p>
+        <table class="data-table">
+          <tr>
+            <th colspan="2">구 분</th>
+            <th class="year">2022년</th>
+            <th class="year">2023년</th>
+            <th class="year">2024년</th>
+            <th class="year">2025년<br>(예측치)</th>
+          </tr>
+          <tr>
+            <th rowspan="4">경영<br>현황</th>
+            <td class="item-cell">● 매출액</td>
+            <td><input type="text" inputmode="numeric" name="sales_2022" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="sales_2023" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="sales_2024" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="sales_2025" class="num-input"><span class="unit">백만원</span></td>
+          </tr>
+          <tr>
+            <td class="item-cell">● 수출액</td>
+            <td><input type="text" inputmode="numeric" name="export_2022" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="export_2023" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="export_2024" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="export_2025" class="num-input"><span class="unit">백만원</span></td>
+          </tr>
+          <tr>
+            <td class="item-cell">● 자본금</td>
+            <td><input type="text" inputmode="numeric" name="capital_2022" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="capital_2023" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="capital_2024" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="capital_2025" class="num-input"><span class="unit">백만원</span></td>
+          </tr>
+          <tr>
+            <td class="item-cell">● 연구개발비</td>
+            <td><input type="text" inputmode="numeric" name="rnd_2022" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="rnd_2023" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="rnd_2024" class="num-input"><span class="unit">백만원</span></td>
+            <td><input type="text" inputmode="numeric" name="rnd_2025" class="num-input"><span class="unit">백만원</span></td>
+          </tr>
+          <tr>
+            <th rowspan="3">인력</th>
+            <td class="item-cell">● 총 종사자수<span class="sub-label">(해당년 12월 기준)</span></td>
+            <td><input type="text" inputmode="numeric" name="emp_2022" class="num-input"><span class="unit">명</span></td>
+            <td><input type="text" inputmode="numeric" name="emp_2023" class="num-input"><span class="unit">명</span></td>
+            <td><input type="text" inputmode="numeric" name="emp_2024" class="num-input"><span class="unit">명</span></td>
+            <td><input type="text" inputmode="numeric" name="emp_2025" class="num-input"><span class="unit">명</span></td>
+          </tr>
+          <tr>
+            <td class="item-cell">● 2025년 신규채용인원<span class="sub-label">* 2026년 내 채용 예정인원 포함</span></td>
+            <td colspan="3"></td>
+            <td><input type="text" inputmode="numeric" name="new_hire_2025" class="num-input"><span class="unit">명</span></td>
+          </tr>
+          <tr>
+            <td class="item-cell">● 2026년 신규채용 예정인원</td>
+            <td colspan="3"></td>
+            <td><input type="text" inputmode="numeric" name="new_hire_2026" class="num-input"><span class="unit">명</span></td>
+          </tr>
+        </table>
+
+        <p class="question"><span class="q-num">B2.</span> 귀사의 주력제품은 무엇입니까? 매출 비중이 가장 큰 제품으로 응답 부탁드립니다.</p>
+        <table class="info-table">
+          <tr><th class="required">주력제품</th><td><input type="text" name="main_product"></td></tr>
+        </table>
+
+        <p class="question"><span class="q-num">B3.</span> 주력제품이 매출('22년~'25년 기준)이 귀사의 매출에서 차지하는 비중은 어느정도입니까?</p>
+        <table class="info-table">
+          <tr><th class="required">주력제품의 전체매출중 비중(%)</th><td><input type="text" inputmode="numeric" name="main_product_ratio" placeholder="%"></td></tr>
+        </table>
+
+        <div class="btn-group">
+          <button type="button" class="btn btn-secondary" onclick="goStep(2)">이전</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(4)">다음</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Step 4: C1 사업추진체계 만족도 ===== -->
+    <div id="step4" class="card">
+      <div class="card-body">
+        <div class="section-header">
+          <span class="section-badge">C</span>
+          <span class="section-title">강소특구 육성사업 참여에 대한 만족도</span>
+        </div>
+
+        <p class="question"><span class="q-num">C1.</span> 2025년 참여하신 군산 강소특구의 지원사업에 대한 평가입니다. 세부 항목별에 대해 귀하께서 만족하는 정도를 응답해 주십시오.<span class="required"></span></p>
+        <table class="rating-table">
+          <tr>
+            <th colspan="3" style="text-align:center;">항목</th>
+            <th class="r-col">매우<br>불만족<br>①</th>
+            <th class="r-col">불만족<br>②</th>
+            <th class="r-col">보통<br>③</th>
+            <th class="r-col">만족<br>④</th>
+            <th class="r-col">매우<br>만족<br>⑤</th>
+          </tr>
+          <tr>
+            <th rowspan="10" class="stage-hdr">사<br>업<br>추<br>진<br>단<br>계<br>별</th>
+            <th rowspan="4" class="sub-hdr">신청<br>단계</th>
+            <td class="item-cell">1. 사업 홍보에 대한 접근성</td>
+            <td><input type="radio" name="c1_1" value="1"></td>
+            <td><input type="radio" name="c1_1" value="2"></td>
+            <td><input type="radio" name="c1_1" value="3"></td>
+            <td><input type="radio" name="c1_1" value="4"></td>
+            <td><input type="radio" name="c1_1" value="5"></td>
+          </tr>
+          <tr>
+            <td class="item-cell">2. 신청 절차의 편의성(사업관리 시스템 이용 등)</td>
+            <td><input type="radio" name="c1_2" value="1"></td><td><input type="radio" name="c1_2" value="2"></td><td><input type="radio" name="c1_2" value="3"></td><td><input type="radio" name="c1_2" value="4"></td><td><input type="radio" name="c1_2" value="5"></td>
+          </tr>
+          <tr>
+            <td class="item-cell">3. 사업 담당자의 연락 용이성</td>
+            <td><input type="radio" name="c1_3" value="1"></td><td><input type="radio" name="c1_3" value="2"></td><td><input type="radio" name="c1_3" value="3"></td><td><input type="radio" name="c1_3" value="4"></td><td><input type="radio" name="c1_3" value="5"></td>
+          </tr>
+          <tr>
+            <td class="item-cell">4. 사업 신청단계 전반의 만족 수준</td>
+            <td><input type="radio" name="c1_4" value="1"></td><td><input type="radio" name="c1_4" value="2"></td><td><input type="radio" name="c1_4" value="3"></td><td><input type="radio" name="c1_4" value="4"></td><td><input type="radio" name="c1_4" value="5"></td>
+          </tr>
+          <tr>
+            <th rowspan="3" class="sub-hdr">진행<br>단계</th>
+            <td class="item-cell">5. 사업 신청부터 선정, 결과통보까지 절차의 체계성</td>
+            <td><input type="radio" name="c1_5" value="1"></td><td><input type="radio" name="c1_5" value="2"></td><td><input type="radio" name="c1_5" value="3"></td><td><input type="radio" name="c1_5" value="4"></td><td><input type="radio" name="c1_5" value="5"></td>
+          </tr>
+          <tr>
+            <td class="item-cell">6. 지원사업 진행 관련 정보의 유용성</td>
+            <td><input type="radio" name="c1_6" value="1"></td><td><input type="radio" name="c1_6" value="2"></td><td><input type="radio" name="c1_6" value="3"></td><td><input type="radio" name="c1_6" value="4"></td><td><input type="radio" name="c1_6" value="5"></td>
+          </tr>
+          <tr>
+            <td class="item-cell">7. 사업 진행단계 전반의 만족 수준</td>
+            <td><input type="radio" name="c1_7" value="1"></td><td><input type="radio" name="c1_7" value="2"></td><td><input type="radio" name="c1_7" value="3"></td><td><input type="radio" name="c1_7" value="4"></td><td><input type="radio" name="c1_7" value="5"></td>
+          </tr>
+          <tr>
+            <th rowspan="3" class="sub-hdr">정산 및<br>사업<br>완료<br>단계</th>
+            <td class="item-cell">8. 정산 및 사업결과보고(완료) 절차의 용이성</td>
+            <td><input type="radio" name="c1_8" value="1"></td><td><input type="radio" name="c1_8" value="2"></td><td><input type="radio" name="c1_8" value="3"></td><td><input type="radio" name="c1_8" value="4"></td><td><input type="radio" name="c1_8" value="5"></td>
+          </tr>
+          <tr>
+            <td class="item-cell">9. 과제 평가방법의 합리성</td>
+            <td><input type="radio" name="c1_9" value="1"></td><td><input type="radio" name="c1_9" value="2"></td><td><input type="radio" name="c1_9" value="3"></td><td><input type="radio" name="c1_9" value="4"></td><td><input type="radio" name="c1_9" value="5"></td>
+          </tr>
+          <tr>
+            <td class="item-cell">10. 사업 정산 및 완료단계 전반의 만족 수준</td>
+            <td><input type="radio" name="c1_10" value="1"></td><td><input type="radio" name="c1_10" value="2"></td><td><input type="radio" name="c1_10" value="3"></td><td><input type="radio" name="c1_10" value="4"></td><td><input type="radio" name="c1_10" value="5"></td>
+          </tr>
+          <tr>
+            <td colspan="3" class="item-cell">11. 지원사업 기간의 적정성</td>
+            <td><input type="radio" name="c1_11" value="1"></td><td><input type="radio" name="c1_11" value="2"></td><td><input type="radio" name="c1_11" value="3"></td><td><input type="radio" name="c1_11" value="4"></td><td><input type="radio" name="c1_11" value="5"></td>
+          </tr>
+          <tr>
+            <td colspan="3" class="item-cell">12. 지원금 규모의 적정성</td>
+            <td><input type="radio" name="c1_12" value="1"></td><td><input type="radio" name="c1_12" value="2"></td><td><input type="radio" name="c1_12" value="3"></td><td><input type="radio" name="c1_12" value="4"></td><td><input type="radio" name="c1_12" value="5"></td>
+          </tr>
+          <tr>
+            <td colspan="3" class="item-cell">13. 사업 참여의 전반적 만족도</td>
+            <td><input type="radio" name="c1_13" value="1"></td><td><input type="radio" name="c1_13" value="2"></td><td><input type="radio" name="c1_13" value="3"></td><td><input type="radio" name="c1_13" value="4"></td><td><input type="radio" name="c1_13" value="5"></td>
+          </tr>
+        </table>
+
+        <p class="question"><span class="q-num">C1-1.</span> 군산 강소특구 사업추진체계에 대한 만족/불만족 이유<span class="required"></span></p>
+        <textarea name="c1_reason" class="form-input" rows="3" placeholder="만족/불만족 이유를 작성해 주세요."></textarea>
+
+        <div class="btn-group">
+          <button type="button" class="btn btn-secondary" onclick="goStep(3)">이전</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(5)">다음</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Step 5: C2 사업결과 만족도 ===== -->
+    <div id="step5" class="card">
+      <div class="card-body">
+        <div class="section-header">
+          <span class="section-badge">C</span>
+          <span class="section-title">강소특구 육성사업 참여에 대한 만족도</span>
+        </div>
+
+        <p class="question"><span class="q-num">C2.</span> 군산 강소특구의 지원사업 결과에서 느끼신 만족도를 작성하여 주시기 바랍니다.<span class="required"></span></p>
+        <table class="rating-table">
+          <tr>
+            <th rowspan="2" colspan="2" style="text-align:center;">항목</th>
+            <th colspan="5" style="background:var(--primary-light); color:var(--primary-dark);">군산 강소특구 만족도</th>
+          </tr>
+          <tr>
+            <th class="r-col">매우<br>불만족<br>①</th>
+            <th class="r-col">불만족<br>②</th>
+            <th class="r-col">보통<br>③</th>
+            <th class="r-col">만족<br>④</th>
+            <th class="r-col">매우<br>만족<br>⑤</th>
+          </tr>
+          <tr>
+            <th rowspan="4" class="sub-hdr" style="width:50px;">사업<br>결과</th>
+            <td class="item-cell">사업 결과 전반적 만족도</td>
+            <td><input type="radio" name="c2_1" value="1"></td><td><input type="radio" name="c2_1" value="2"></td><td><input type="radio" name="c2_1" value="3"></td><td><input type="radio" name="c2_1" value="4"></td><td><input type="radio" name="c2_1" value="5"></td>
+          </tr>
+          <tr>
+            <td class="item-cell">사업결과 파급효과 만족도</td>
+            <td><input type="radio" name="c2_2" value="1"></td><td><input type="radio" name="c2_2" value="2"></td><td><input type="radio" name="c2_2" value="3"></td><td><input type="radio" name="c2_2" value="4"></td><td><input type="radio" name="c2_2" value="5"></td>
+          </tr>
+          <tr>
+            <td class="item-cell">사업전략수립 영향기준 만족도</td>
+            <td><input type="radio" name="c2_3" value="1"></td><td><input type="radio" name="c2_3" value="2"></td><td><input type="radio" name="c2_3" value="3"></td><td><input type="radio" name="c2_3" value="4"></td><td><input type="radio" name="c2_3" value="5"></td>
+          </tr>
+          <tr>
+            <td class="item-cell">적용가능성 기준 성과 만족도</td>
+            <td><input type="radio" name="c2_4" value="1"></td><td><input type="radio" name="c2_4" value="2"></td><td><input type="radio" name="c2_4" value="3"></td><td><input type="radio" name="c2_4" value="4"></td><td><input type="radio" name="c2_4" value="5"></td>
+          </tr>
+        </table>
+
+        <p class="question"><span class="q-num">C2-1.</span> 군산 강소특구의 지원사업 사업결과에 대한 만족/불만족 이유<span class="required"></span></p>
+        <textarea name="c2_reason" class="form-input" rows="3" placeholder="만족/불만족 이유를 작성해 주세요."></textarea>
+
+        <div class="btn-group">
+          <button type="button" class="btn btn-secondary" onclick="goStep(4)">이전</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(6)">다음</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Step 6: C3~C4 재추진/추천 + 개선제안 ===== -->
+    <div id="step6" class="card">
+      <div class="card-body">
+        <div class="section-header">
+          <span class="section-badge">C</span>
+          <span class="section-title">재추진 및 추천 의향</span>
+        </div>
+
+        <p class="question"><span class="q-num">C3.</span> 강소특구 육성사업 재추진 및 추천 의향<span class="required"></span></p>
+        <table class="rating-table">
+          <tr>
+            <th style="text-align:center; width:40%;">항목</th>
+            <th class="r-col">전혀<br>아니다<br>①</th>
+            <th class="r-col">아니다<br>②</th>
+            <th class="r-col">보통<br>③</th>
+            <th class="r-col">그렇다<br>④</th>
+            <th class="r-col">매우<br>그렇다<br>⑤</th>
+          </tr>
+          <tr>
+            <td class="item-cell">사업 재추진 의향</td>
+            <td><input type="radio" name="c3_retry" value="1"></td><td><input type="radio" name="c3_retry" value="2"></td><td><input type="radio" name="c3_retry" value="3"></td><td><input type="radio" name="c3_retry" value="4"></td><td><input type="radio" name="c3_retry" value="5"></td>
+          </tr>
+          <tr>
+            <td class="item-cell">타 기업(기관) 추천 의향</td>
+            <td><input type="radio" name="c3_recommend" value="1"></td><td><input type="radio" name="c3_recommend" value="2"></td><td><input type="radio" name="c3_recommend" value="3"></td><td><input type="radio" name="c3_recommend" value="4"></td><td><input type="radio" name="c3_recommend" value="5"></td>
+          </tr>
+        </table>
+
+        <div id="retryReasonBox" class="cond-box">
+          <label>C3-1. 재추진 이유 ('그렇다', '매우 그렇다' 선택 시)</label>
+          <textarea name="c3_retry_reason" class="form-input" rows="2" placeholder="재추진 이유를 작성해 주세요."></textarea>
+        </div>
+        <div id="recommendReasonBox" class="cond-box">
+          <label>C3-2. 타 기업(기관) 추천 이유 ('그렇다', '매우 그렇다' 선택 시)</label>
+          <textarea name="c3_recommend_reason" class="form-input" rows="2" placeholder="추천 이유를 작성해 주세요."></textarea>
+        </div>
+
+        <p class="question mt-3"><span class="q-num">C4.</span> 강소특구 육성사업 활성화를 위한 신규 지원사업 보완내용 개선 및 제안<span class="required"></span></p>
+        <textarea name="c4_suggestion" class="form-input" rows="3" placeholder="'26년 신규 지원사업에 대한 의견을 자유롭게 작성해 주세요."></textarea>
+
+        <div class="btn-group">
+          <button type="button" class="btn btn-secondary" onclick="goStep(5)">이전</button>
+          <button type="button" id="btnStep6Next" class="btn btn-primary" onclick="handleStep6()">다음</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Step 7: D. G2G 만족도 (G2G만) ===== -->
+    <div id="step7" class="card">
+      <div class="card-body">
+        <div class="section-header">
+          <span class="section-badge red">D</span>
+          <span class="section-title">군산 강소특구 G2G 지원사업 시범사업에 대한 만족도</span>
+        </div>
+
+        <p class="question"><span class="q-num">D1.</span> 군산 강소특구 2025년 G2G 지원사업의 시범사업 추진결과에 대한 포괄적인 만족도 조사입니다.<span class="required"></span></p>
+        <p style="font-size:0.85rem; color:var(--primary-dark); margin-bottom:14px;">※ 2025년 G2G 시범사업 추진 결과</p>
+        <table class="rating-table">
+          <tr>
+            <th rowspan="2" style="text-align:center; width:180px;">항목</th>
+            <th colspan="5" style="background:var(--primary-light); color:var(--primary-dark); font-size:0.72rem;">군산 강소특구 G2G 지원 2025년 시범사업 추진에 대한<br>기업의 포괄적 만족 정도</th>
+          </tr>
+          <tr>
+            <th class="r-col">매우<br>불만족<br>①</th>
+            <th class="r-col">불만족<br>②</th>
+            <th class="r-col">보통<br>③</th>
+            <th class="r-col">만족<br>④</th>
+            <th class="r-col">매우<br>만족<br>⑤</th>
+          </tr>
+          <tr>
+            <td class="item-cell">2025 시범사업 추진결과에 대한 만족 정도</td>
+            <td><input type="radio" name="d1_sat" value="1"></td><td><input type="radio" name="d1_sat" value="2"></td><td><input type="radio" name="d1_sat" value="3"></td><td><input type="radio" name="d1_sat" value="4"></td><td><input type="radio" name="d1_sat" value="5"></td>
+          </tr>
+        </table>
+
+        <p class="question"><span class="q-num">D2.</span> 2025년 G2G 시범사업 추진 결과 만족/불만족 이유<span class="required"></span></p>
+        <textarea name="d2_reason" class="form-input" rows="3" placeholder="만족/불만족 이유를 작성해 주세요."></textarea>
+
+        <div class="btn-group">
+          <button type="button" class="btn btn-secondary" onclick="goStep(6)">이전</button>
+          <button type="button" class="btn btn-primary" onclick="goStep(8)">다음</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Step 8: E. G2G 수요조사 (G2G만) ===== -->
+    <div id="step8" class="card">
+      <div class="card-body">
+        <div class="section-header">
+          <span class="section-badge red">E</span>
+          <span class="section-title">군산 강소특구 G2G 지원사업 확대추진을 위한 기업수요 조사</span>
+        </div>
+
+        <p style="font-size:0.85rem; color:var(--text); margin-bottom:18px; line-height:1.6;">군산 강소특구의 G2G 프로그램 향후 확대 추진을 위한 기업의 수요파악을 위한 조사입니다.<br>세부 항목별에 대해 귀하의 의견 정도를 응답해 주십시오.</p>
+
+        <p class="question"><span class="q-num">E1.</span> 군산 강소특구의 G2G 프로그램 향후 확대 추진('26년~'30년)에 대한 기대감의 정도<span class="required"></span></p>
+        <table class="rating-table">
+          <tr>
+            <th rowspan="2" style="text-align:center; width:160px;">항목</th>
+            <th colspan="5" style="background:var(--primary-light); color:var(--primary-dark); font-size:0.72rem;">군산 강소특구 G2G 지원사업 추진에 대한 기업의 기대 정도</th>
+          </tr>
+          <tr>
+            <th class="r-col">전혀<br>기대하지<br>않는다①</th>
+            <th class="r-col">기대하지<br>않는다②</th>
+            <th class="r-col">보통<br>③</th>
+            <th class="r-col">기대한다<br>④</th>
+            <th class="r-col">매우<br>기대한다<br>⑤</th>
+          </tr>
+          <tr>
+            <td class="item-cell">본 사업 기간('26년~'30년) 기대 정도</td>
+            <td><input type="radio" name="e1_expect" value="1"></td><td><input type="radio" name="e1_expect" value="2"></td><td><input type="radio" name="e1_expect" value="3"></td><td><input type="radio" name="e1_expect" value="4"></td><td><input type="radio" name="e1_expect" value="5"></td>
+          </tr>
+        </table>
+
+        <p class="question"><span class="q-num">E2.</span> G2G 프로그램 향후 확대 추진에 대한 기업의 포괄적인 필요성 관련 인식 조사<span class="required"></span></p>
+        <table class="rating-table">
+          <tr>
+            <th rowspan="2" style="text-align:center; width:160px;">항목</th>
+            <th colspan="5" style="background:var(--primary-light); color:var(--primary-dark); font-size:0.7rem;">G2G 프로그램의 글로벌 진출역량 진단 및 기업별 맞춤형 지원<br>(산업조사, 목적 바이어조사, 진출 역량 강화개선 등)</th>
+          </tr>
+          <tr>
+            <th class="r-col">전혀<br>필요하지<br>않다①</th>
+            <th class="r-col">필요하지<br>않다②</th>
+            <th class="r-col">보통<br>③</th>
+            <th class="r-col">필요하다<br>④</th>
+            <th class="r-col">매우<br>필요하다<br>⑤</th>
+          </tr>
+          <tr>
+            <td class="item-cell">기본방향 설정에 대한 기업의 필요성 인식 정도</td>
+            <td><input type="radio" name="e2_need" value="1"></td><td><input type="radio" name="e2_need" value="2"></td><td><input type="radio" name="e2_need" value="3"></td><td><input type="radio" name="e2_need" value="4"></td><td><input type="radio" name="e2_need" value="5"></td>
+          </tr>
+        </table>
+
+        <p class="question"><span class="q-num">E3.</span> G2G 프로그램 향후 확대 추진에 대한 기업의 참여 의사 정도 조사<span class="required"></span></p>
+        <table class="rating-table">
+          <tr>
+            <th rowspan="2" style="text-align:center; width:160px;">항목</th>
+            <th colspan="5" style="background:var(--primary-light); color:var(--primary-dark); font-size:0.7rem;">G2G 프로그램의 글로벌 진출역량 진단 및 기업별 맞춤형 지원</th>
+          </tr>
+          <tr>
+            <th class="r-col">전혀<br>참여의사<br>없다①</th>
+            <th class="r-col">참여의사<br>없다②</th>
+            <th class="r-col">보통<br>③</th>
+            <th class="r-col">참여의사<br>있다④</th>
+            <th class="r-col">매우<br>참여의사<br>있다⑤</th>
+          </tr>
+          <tr>
+            <td class="item-cell">기업의 참여의사 정도</td>
+            <td><input type="radio" name="e3_participate" value="1"></td><td><input type="radio" name="e3_participate" value="2"></td><td><input type="radio" name="e3_participate" value="3"></td><td><input type="radio" name="e3_participate" value="4"></td><td><input type="radio" name="e3_participate" value="5"></td>
+          </tr>
+        </table>
+
+        <p class="question"><span class="q-num">E4.</span> G2G 프로그램 향후 확대 추진에 대한 신규 지원사업 보완내용 개선 및 제안<span class="required"></span></p>
+        <p style="font-weight:600; margin-bottom:10px; font-size:0.85rem;">■ 군산 강소특구 G2G 프로그램 보완 내용 의견제시</p>
+        <div class="choice-group">
+          <div class="choice-item"><input type="checkbox" name="e4" value="1" id="e4_1"><label for="e4_1">1. 글로벌 역량진단 후 강화 프로그램 보완</label></div>
+          <div class="choice-item"><input type="checkbox" name="e4" value="2" id="e4_2"><label for="e4_2">2. 글로벌 주 목적사업 기업별 맞춤형 조사</label></div>
+          <div class="choice-item"><input type="checkbox" name="e4" value="3" id="e4_3"><label for="e4_3">3. 조사 후 대상 바이어 세부정보 조사</label></div>
+          <div class="choice-item"><input type="checkbox" name="e4" value="4" id="e4_4"><label for="e4_4">4. 목적시장 바이어 대상 마케팅·매칭, 수출 프로그램(매칭) 강화 프로그램 운영</label></div>
+          <div class="choice-item"><input type="checkbox" name="e4" value="5" id="e4_5"><label for="e4_5">5. 목적 바이어의 기술 수요대응 R&D 프로그램 부가운영</label></div>
+          <div class="choice-item"><input type="checkbox" name="e4" value="6" id="e4_6"><label for="e4_6">6. 기타 (지원프로그램에 대한 의견 추가제시)</label></div>
+        </div>
+        <div id="e4OtherBox" class="cond-box">
+          <textarea name="e4_other" class="form-input" rows="2" placeholder="기타 의견이 있으시면 작성해 주세요."></textarea>
+        </div>
+
+        <p style="text-align:center; margin-top:28px; font-weight:600; color:var(--primary-dark);">- 끝까지 응답해 주셔서 진심으로 감사드립니다 -</p>
+
+        <div class="btn-group" style="margin-top:20px;">
+          <button type="button" class="btn btn-secondary" onclick="goStep(7)">이전</button>
+          <button type="button" class="btn btn-success" onclick="submitSurvey()">최종 제출하기</button>
+        </div>
+      </div>
+    </div>
+
+  </form>
+</div>
+
+<!-- 모달 -->
+<div id="modal" class="modal-bg">
+  <div class="modal-box">
+    <div id="mIcon" class="modal-icon"></div>
+    <div id="mTitle" class="modal-title"></div>
+    <div id="mMsg" class="modal-msg"></div>
+    <div id="mBtns" class="modal-btns"></div>
+  </div>
+</div>
+
+<script>
+// ===== Supabase 초기화 =====
+const SUPABASE_URL = 'https://qzgleuukeyfyhryjflzd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6Z2xldXVrZXlmeWhyeWpmbHpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTc3MDUsImV4cCI6MjA4NDc3MzcwNX0.hn50N_GmTiA8EFM166q0IB8XCjssr_TKtvSMrbikM_Y';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===== 전역 상태 =====
+let currentStep = 1;
+let lookupDone = false;
+let editMode = false;
+let currentBizNo = '';
+let modalResolve = null;
+let g2gAdditionalMode = false; // G2G 추가 입력 모드
+const G2G_COMPANIES = [
+  '740-88-02953',
+  '459-86-02830',
+  '139-81-23576',
+  '506-87-01172',
+  '401-81-25372',
+  '187-86-01300',
+  '161-35-00914'
+];
+
+// ===== 초기화 =====
+document.addEventListener('DOMContentLoaded', () => {
+  // URL에 ?reset=1 있으면 임시저장 삭제
+  if (new URLSearchParams(window.location.search).get('reset') === '1') {
+    localStorage.removeItem('gunsan_survey_draft');
+  }
+  
+  renderStepBar();
+  setupBizNoFormat();
+  setupNumFormat();
+  setupConditionals();
+  restoreDraft();
+});
+
+// ===== 스텝 인디케이터 =====
+function getTotalSteps() {
+  return isG2G() ? 8 : 6;
+}
+
+function isG2G() {
+  const el = document.querySelector('input[name="g2g_flag"]:checked');
+  return el && el.value === 'YES';
+}
+
+function renderStepBar() {
+  const total = getTotalSteps();
+  const bar = document.getElementById('stepBar');
+  let html = '';
+  for (let i = 1; i <= total; i++) {
+    if (i > 1) html += `<div class="step-line ${i <= currentStep ? 'done' : ''}"></div>`;
+    let cls = '';
+    if (i < currentStep) cls = 'done';
+    else if (i === currentStep) cls = 'active';
+    html += `<div class="step-dot ${cls}">${i < currentStep ? '&#10003;' : i}</div>`;
+  }
+  bar.innerHTML = html;
+  const labels = ['기업정보', '수혜내역', '경영현황', '만족도(추진)', '만족도(결과)', '재추진/제안', 'G2G 만족도', 'G2G 수요'];
+  document.getElementById('stepLabel').textContent = `${currentStep} / ${total} — ${labels[currentStep-1]}`;
+}
+
+// ===== 필수항목 검사 =====
+function validateStep(step) {
+  let missing = [];
+  
+  if (step === 1) {
+    // A1: 기업개요 (지사 제외)
+    const fields = [
+      { id: 'f_name', label: '업체명' },
+      { id: 'f_year', label: '설립년도' },
+      { id: 'f_ceo', label: '대표자' },
+      { id: 'f_industry', label: '업종' },
+      { id: 'f_bizno', label: '사업자등록번호' },
+      { id: 'f_corpno', label: '법인등록번호' },
+      { id: 'f_addrHq', label: '본사 주소' },
+      { id: 'f_telHq', label: '본사 전화' }
+    ];
+    missing = fields.filter(f => !document.getElementById(f.id).value.trim()).map(f => f.label);
+  }
+  
+  else if (step === 2) {
+    // A3: 수혜내역 최소 1개
+    const benefits = document.querySelectorAll('input[name="benefit"]:checked');
+    if (benefits.length === 0) missing.push('A3. 수혜내역 (최소 1개 선택)');
+    // A4: 작성자
+    const writerFields = [
+      { name: 'writer_name', label: '성명/직급' },
+      { name: 'writer_dept', label: '부서명' },
+      { name: 'writer_phone', label: '연락처' },
+      { name: 'writer_email', label: '이메일' }
+    ];
+    writerFields.forEach(f => {
+      if (!document.querySelector(`input[name="${f.name}"]`).value.trim()) missing.push('A4. ' + f.label);
+    });
+  }
+  
+  else if (step === 3) {
+    // B1: 경영현황
+    const numFields = ['sales', 'export', 'capital', 'rnd', 'emp'];
+    const years = ['2022', '2023', '2024', '2025'];
+    numFields.forEach(field => {
+      years.forEach(year => {
+        const input = document.querySelector(`input[name="${field}_${year}"]`);
+        if (input && !input.value.trim()) missing.push(`B1. ${field === 'sales' ? '매출액' : field === 'export' ? '수출액' : field === 'capital' ? '자본금' : field === 'rnd' ? '연구개발비' : '총 종사자수'} (${year}년)`);
+      });
+    });
+    // 신규채용
+    if (!document.querySelector('input[name="new_hire_2025"]').value.trim()) missing.push('B1. 2025년 신규채용인원');
+    if (!document.querySelector('input[name="new_hire_2026"]').value.trim()) missing.push('B1. 2026년 신규채용 예정인원');
+    // B2, B3
+    if (!document.querySelector('input[name="main_product"]').value.trim()) missing.push('B2. 주력제품');
+    if (!document.querySelector('input[name="main_product_ratio"]').value.trim()) missing.push('B3. 주력제품 비중');
+  }
+  
+  else if (step === 4) {
+    // C1: 만족도 1~13
+    for (let i = 1; i <= 13; i++) {
+      if (!document.querySelector(`input[name="c1_${i}"]:checked`)) missing.push(`C1. 항목 ${i}`);
+    }
+    // C1-1
+    if (!document.querySelector('textarea[name="c1_reason"]').value.trim()) missing.push('C1-1. 만족/불만족 이유');
+  }
+  
+  else if (step === 5) {
+    // C2: 만족도 1~4
+    for (let i = 1; i <= 4; i++) {
+      if (!document.querySelector(`input[name="c2_${i}"]:checked`)) missing.push(`C2. 항목 ${i}`);
+    }
+    // C2-1
+    if (!document.querySelector('textarea[name="c2_reason"]').value.trim()) missing.push('C2-1. 만족/불만족 이유');
+  }
+  
+  else if (step === 6) {
+    // C3: 재추진, 추천
+    if (!document.querySelector('input[name="c3_retry"]:checked')) missing.push('C3. 사업 재추진 의향');
+    if (!document.querySelector('input[name="c3_recommend"]:checked')) missing.push('C3. 타 기업(기관) 추천 의향');
+    // C3-1, C3-2 조건부
+    const retryVal = document.querySelector('input[name="c3_retry"]:checked');
+    const recomVal = document.querySelector('input[name="c3_recommend"]:checked');
+    if (retryVal && parseInt(retryVal.value) >= 4 && !document.querySelector('textarea[name="c3_retry_reason"]').value.trim()) {
+      missing.push('C3-1. 재추진 이유');
+    }
+    if (recomVal && parseInt(recomVal.value) >= 4 && !document.querySelector('textarea[name="c3_recommend_reason"]').value.trim()) {
+      missing.push('C3-2. 추천 이유');
+    }
+    // C4
+    if (!document.querySelector('textarea[name="c4_suggestion"]').value.trim()) missing.push('C4. 개선 및 제안');
+  }
+  
+  else if (step === 7) {
+    // D1
+    if (!document.querySelector('input[name="d1_sat"]:checked')) missing.push('D1. 만족도');
+    // D2
+    if (!document.querySelector('textarea[name="d2_reason"]').value.trim()) missing.push('D2. 만족/불만족 이유');
+  }
+  
+  else if (step === 8) {
+    // E1, E2, E3
+    if (!document.querySelector('input[name="e1_expect"]:checked')) missing.push('E1. 기대 정도');
+    if (!document.querySelector('input[name="e2_need"]:checked')) missing.push('E2. 필요성 인식');
+    if (!document.querySelector('input[name="e3_participate"]:checked')) missing.push('E3. 참여의사');
+    // E4: 최소 1개 선택
+    const e4Checked = document.querySelectorAll('input[name="e4"]:checked');
+    if (e4Checked.length === 0) missing.push('E4. 보완내용 (최소 1개 선택)');
+    // E4 기타 선택 시 내용 필수
+    if (document.getElementById('e4_6').checked && !document.querySelector('textarea[name="e4_other"]').value.trim()) {
+      missing.push('E4. 기타 의견');
+    }
+  }
+  
+  if (missing.length > 0) {
+    showAlert('필수항목을 입력해 주세요:\n' + missing.slice(0, 10).map(m => '• ' + m).join('\n') + (missing.length > 10 ? `\n... 외 ${missing.length - 10}건` : ''), 'error', '필수항목 누락');
+    return false;
+  }
+  return true;
+}
+
+// ===== 단계 이동 =====
+function goStep(n) {
+  // Step 1: 조회 필수
+  if (currentStep === 1 && n > 1 && !lookupDone) {
+    showAlert('사업자등록번호를 조회해 주세요.', 'error');
+    return;
+  }
+  
+  // G2G 추가 입력 모드: A~C도 순차적으로 확인/수정 가능 (별도 처리 없음)
+  
+  // 필수항목 검사
+  if (n > currentStep && !validateStep(currentStep)) return;
+  
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+  currentStep = n;
+  renderStepBar();
+  updateStep6Btn();
+  saveDraft();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function handleStep6() {
+  if (isG2G()) {
+    goStep(7);
+  } else {
+    submitSurvey();
+  }
+}
+
+function updateStep6Btn() {
+  const btn = document.getElementById('btnStep6Next');
+  if (!btn) return;
+  if (isG2G()) {
+    btn.textContent = '다음 (G2G 문항)';
+    btn.className = 'btn btn-primary';
+    btn.onclick = () => goStep(7);
+  } else {
+    btn.textContent = '최종 제출하기';
+    btn.className = 'btn btn-success';
+    btn.onclick = submitSurvey;
+  }
+}
+
+// ===== 사업자번호 자동 하이픈 =====
+function setupBizNoFormat() {
+  const input = document.getElementById('bizNoInput');
+  input.addEventListener('input', function() {
+    let v = this.value.replace(/[^0-9]/g, '');
+    if (v.length > 10) v = v.slice(0, 10);
+    if (v.length <= 3) this.value = v;
+    else if (v.length <= 5) this.value = v.slice(0, 3) + '-' + v.slice(3);
+    else this.value = v.slice(0, 3) + '-' + v.slice(3, 5) + '-' + v.slice(5);
+  });
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); doLookup(); }
+  });
+}
+
+// ===== 숫자 콤마 포맷 =====
+function fmtNum(n) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function stripNum(s) {
+  return String(s || '').replace(/[^0-9]/g, '');
+}
+function setupNumFormat() {
+  document.querySelectorAll('.num-input').forEach(inp => {
+    inp.addEventListener('input', function() {
+      const raw = stripNum(this.value);
+      this.value = raw ? fmtNum(raw) : '';
+    });
+  });
+}
+
+// ===== 조건부 표시 =====
+function setupConditionals() {
+  // C3 재추진/추천
+  document.querySelectorAll('input[name="c3_retry"]').forEach(r => r.addEventListener('change', updateC3Cond));
+  document.querySelectorAll('input[name="c3_recommend"]').forEach(r => r.addEventListener('change', updateC3Cond));
+  // E4 기타
+  document.getElementById('e4_6').addEventListener('change', function() {
+    document.getElementById('e4OtherBox').classList.toggle('show', this.checked);
+  });
+  // G2G 변경 시
+  document.querySelectorAll('input[name="g2g_flag"]').forEach(r => {
+    r.addEventListener('change', () => { renderStepBar(); updateStep6Btn(); updateG2GBenefit(); });
+  });
+}
+
+function updateG2GBenefit() {
+  const b4 = document.getElementById('b4');
+  if (isG2G()) {
+    b4.checked = true;
+    b4.disabled = true;
+  } else {
+    b4.checked = false;
+    b4.disabled = false;
+  }
+}
+
+function updateC3Cond() {
+  const rv = document.querySelector('input[name="c3_retry"]:checked');
+  const rc = document.querySelector('input[name="c3_recommend"]:checked');
+  document.getElementById('retryReasonBox').classList.toggle('show', rv && parseInt(rv.value) >= 4);
+  document.getElementById('recommendReasonBox').classList.toggle('show', rc && parseInt(rc.value) >= 4);
+}
+
+// ===== 기업 조회 (Supabase) =====
+async function doLookup() {
+  const bizNo = document.getElementById('bizNoInput').value.trim();
+  const msgEl = document.getElementById('lookupMsg');
+  const btn = document.getElementById('btnLookup');
+
+  if (!/^\d{3}-\d{2}-\d{5}$/.test(bizNo)) {
+    msgEl.className = 'msg error';
+    msgEl.textContent = '사업자등록번호 형식이 올바르지 않습니다. (예: 000-00-00000)';
+    return;
+  }
+
+  // 중복 제출 체크
+  msgEl.className = 'msg info';
+  msgEl.textContent = '조회 중...';
+  btn.disabled = true;
+  btn.textContent = '조회 중...';
+
+  try {
+    // 이미 제출했는지 확인
+    const { data: existing } = await db
+      .from('responses')
+      .select('*')
+      .eq('biz_no', bizNo)
+      .maybeSingle();
+
+    if (existing) {
+      // G2G 기업이면 추가 입력 모드
+      if (G2G_COMPANIES.includes(bizNo)) {
+        g2gAdditionalMode = true;
+        currentBizNo = bizNo;
+        
+        // 기존 응답 데이터 채우기
+        fillExistingResponse(existing);
+        
+        // G2G로 설정 및 변경 불가
+        document.getElementById('g2g_y').checked = true;
+        document.getElementById('g2g_n').checked = false;
+        document.getElementById('g2g_y').disabled = true;
+        document.getElementById('g2g_n').disabled = true;
+        updateG2GBenefit();
+        
+        document.getElementById('dispBizNo').textContent = bizNo;
+        document.getElementById('f_bizno').value = bizNo;
+        document.getElementById('lookupBox').classList.add('done');
+        document.getElementById('companyArea').classList.add('show');
+        
+        msgEl.className = 'msg success';
+        msgEl.textContent = 'G2G 기업 확인 - 기존 응답을 확인/수정 후 D, E 항목을 추가 입력해 주세요.';
+        lookupDone = true;
+        
+        renderStepBar();
+        updateStep6Btn();
+        
+        // 안내 메시지
+        setTimeout(() => {
+          showAlert('G2G 참여기업으로 확인되었습니다.\n\n기존 응답(A~C)을 확인하고 필요시 수정할 수 있습니다.\n마지막에 D, E 항목을 추가로 입력해 주세요.', 'success', 'G2G 추가 입력');
+        }, 300);
+        
+        btn.disabled = false;
+        btn.textContent = '조회';
+        return;
+      }
+      
+      // 일반 기업은 기존 에러
+      msgEl.className = 'msg error';
+      msgEl.textContent = '이미 설문을 제출한 사업자등록번호입니다.';
+      btn.disabled = false;
+      btn.textContent = '조회';
+      return;
+    }
+
+    // 기업 조회
+    const { data: company, error } = await db
+      .from('companies')
+      .select('*')
+      .eq('biz_no', bizNo)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    currentBizNo = bizNo;
+    g2gAdditionalMode = false;
+    document.getElementById('dispBizNo').textContent = bizNo;
+
+    // A2: G2G 여부 자동 설정 및 잠금 (명단 기준)
+    const isG2GCompany = G2G_COMPANIES.includes(bizNo);
+    if (isG2GCompany) {
+      document.getElementById('g2g_y').checked = true;
+      document.getElementById('g2g_n').checked = false;
+    } else {
+      document.getElementById('g2g_y').checked = false;
+      document.getElementById('g2g_n').checked = true;
+    }
+    // G2G 여부 변경 불가 (모든 기업)
+    document.getElementById('g2g_y').disabled = true;
+    document.getElementById('g2g_n').disabled = true;
+    updateG2GBenefit();
+    renderStepBar();
+    updateStep6Btn();
+
+    if (company) {
+      // 기존 기업
+      fillCompanyInfo(company);
+      document.getElementById('lookupBox').classList.add('done');
+      msgEl.className = 'msg success';
+      msgEl.textContent = isG2GCompany ? 'G2G 참여기업 확인 - 조회 완료' : '조회 완료';
+      document.getElementById('btnEdit').textContent = '정보 수정';
+    } else {
+      // 미등록 기업
+      clearCompanyInfo();
+      if (isG2GCompany) {
+        // G2G 기업이지만 companies 테이블에 미등록
+        document.getElementById('lookupBox').classList.add('done');
+        msgEl.className = 'msg success';
+        msgEl.textContent = 'G2G 참여기업 확인 - 기업정보를 입력해 주세요.';
+      } else {
+        document.getElementById('lookupBox').classList.remove('done');
+        msgEl.className = 'msg warn';
+        msgEl.textContent = '등록되지 않은 기업입니다. 기업정보를 직접 입력해 주세요.';
+      }
+      document.getElementById('btnEdit').textContent = '기업정보 직접 입력';
+    }
+
+    document.getElementById('f_bizno').value = bizNo;
+    document.getElementById('companyArea').classList.add('show');
+    lookupDone = true;
+
+  } catch (err) {
+    msgEl.className = 'msg error';
+    msgEl.textContent = '조회 중 오류가 발생했습니다: ' + (err.message || '알 수 없는 오류');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '조회';
+}
+
+function fillCompanyInfo(c) {
+  document.getElementById('f_name').value = c.company_name || '';
+  document.getElementById('f_year').value = c.found_year || '';
+  document.getElementById('f_ceo').value = c.ceo || '';
+  document.getElementById('f_industry').value = c.industry || '';
+  document.getElementById('f_corpno').value = c.corp_no || '';
+  document.getElementById('f_addrHq').value = c.addr_hq || '';
+  document.getElementById('f_telHq').value = c.tel_hq || '';
+  document.getElementById('f_faxHq').value = c.fax_hq || '';
+  document.getElementById('f_addrBranch').value = c.addr_branch || '';
+  document.getElementById('f_telBranch').value = c.tel_branch || '';
+  document.getElementById('f_faxBranch').value = c.fax_branch || '';
+
+  // B섹션 2022/2023 데이터 미리 채우기
+  const setField = (name, val) => {
+    const el = document.querySelector(`input[name="${name}"]`);
+    if (el && val) el.value = fmtNum(stripNum(val));
+  };
+  setField('sales_2022', c.sales_2022);
+  setField('sales_2023', c.sales_2023);
+  setField('export_2022', c.export_2022);
+  setField('export_2023', c.export_2023);
+  setField('capital_2022', c.capital_2022);
+  setField('capital_2023', c.capital_2023);
+  setField('rnd_2022', c.rnd_2022);
+  setField('rnd_2023', c.rnd_2023);
+  setField('emp_2022', c.emp_2022);
+  setField('emp_2023', c.emp_2023);
+}
+
+function clearCompanyInfo() {
+  ['f_name','f_year','f_ceo','f_industry','f_corpno','f_addrHq','f_telHq','f_faxHq','f_addrBranch','f_telBranch','f_faxBranch'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+// G2G 추가 입력 모드: 기존 응답 데이터 채우기
+function fillExistingResponse(r) {
+  // A1: 기업 정보
+  document.getElementById('f_name').value = r.company_name || '';
+  document.getElementById('f_year').value = r.found_year || '';
+  document.getElementById('f_ceo').value = r.ceo || '';
+  document.getElementById('f_industry').value = r.industry || '';
+  document.getElementById('f_corpno').value = r.corp_no || '';
+  document.getElementById('f_addrHq').value = r.addr_hq || '';
+  document.getElementById('f_telHq').value = r.tel_hq || '';
+  document.getElementById('f_faxHq').value = r.fax_hq || '';
+  document.getElementById('f_addrBranch').value = r.addr_branch || '';
+  document.getElementById('f_telBranch').value = r.tel_branch || '';
+  document.getElementById('f_faxBranch').value = r.fax_branch || '';
+  
+  // A3: 수혜내역
+  if (r.benefits) {
+    r.benefits.split(',').forEach(v => {
+      const cb = document.querySelector(`input[name="benefit"][value="${v}"]`);
+      if (cb) cb.checked = true;
+    });
+  }
+  
+  // A4: 작성자
+  const setVal = (name, val) => {
+    const el = document.querySelector(`input[name="${name}"], textarea[name="${name}"]`);
+    if (el && val) el.value = val;
+  };
+  setVal('writer_name', r.writer_name);
+  setVal('writer_dept', r.writer_dept);
+  setVal('writer_phone', r.writer_phone);
+  setVal('writer_email', r.writer_email);
+  
+  // B1: 경영현황
+  const numFields = ['sales', 'export', 'capital', 'rnd', 'emp'];
+  const years = ['2022', '2023', '2024', '2025'];
+  numFields.forEach(field => {
+    years.forEach(year => {
+      const val = r[`${field}_${year}`];
+      if (val) setVal(`${field}_${year}`, fmtNum(val));
+    });
+  });
+  setVal('new_hire_2025', r.new_hire_2025 ? fmtNum(r.new_hire_2025) : '');
+  setVal('new_hire_2026', r.new_hire_2026 ? fmtNum(r.new_hire_2026) : '');
+  
+  // B2, B3
+  setVal('main_product', r.main_product);
+  setVal('main_product_ratio', r.main_product_ratio);
+  
+  // C1: 만족도
+  for (let i = 1; i <= 13; i++) {
+    if (r[`c1_${i}`]) {
+      const radio = document.querySelector(`input[name="c1_${i}"][value="${r[`c1_${i}`]}"]`);
+      if (radio) radio.checked = true;
+    }
+  }
+  setVal('c1_reason', r.c1_reason);
+  
+  // C2: 만족도
+  for (let i = 1; i <= 4; i++) {
+    if (r[`c2_${i}`]) {
+      const radio = document.querySelector(`input[name="c2_${i}"][value="${r[`c2_${i}`]}"]`);
+      if (radio) radio.checked = true;
+    }
+  }
+  setVal('c2_reason', r.c2_reason);
+  
+  // C3: 재추진/추천
+  if (r.c3_retry) {
+    const radio = document.querySelector(`input[name="c3_retry"][value="${r.c3_retry}"]`);
+    if (radio) radio.checked = true;
+  }
+  if (r.c3_recommend) {
+    const radio = document.querySelector(`input[name="c3_recommend"][value="${r.c3_recommend}"]`);
+    if (radio) radio.checked = true;
+  }
+  setVal('c3_retry_reason', r.c3_retry_reason);
+  setVal('c3_recommend_reason', r.c3_recommend_reason);
+  setVal('c4_suggestion', r.c4_suggestion);
+  
+  updateC3Cond();
+}
+
+// ===== 정보 수정 모드 =====
+function toggleEdit() {
+  editMode = !editMode;
+  const btn = document.getElementById('btnEdit');
+  const inputs = document.querySelectorAll('#companyArea .info-table input, #companyArea .addr-main input, #companyArea .addr-contact input');
+  if (editMode) {
+    inputs.forEach(i => { i.removeAttribute('readonly'); i.classList.add('editable'); });
+    btn.textContent = '수정 완료';
+    btn.classList.add('active');
+  } else {
+    inputs.forEach(i => { i.setAttribute('readonly', true); i.classList.remove('editable'); });
+    btn.textContent = '정보 수정';
+    btn.classList.remove('active');
+  }
+}
+
+// ===== 임시 저장 (localStorage) =====
+function saveDraft() {
+  const data = collectFormData();
+  data._step = currentStep;
+  data._bizNo = currentBizNo;
+  data._lookupDone = lookupDone;
+  localStorage.setItem('gunsan_survey_draft', JSON.stringify(data));
+}
+
+function restoreDraft() {
+  const raw = localStorage.getItem('gunsan_survey_draft');
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    if (!data._bizNo) return;
+
+    // 폼 필드 복원
+    Object.entries(data).forEach(([key, val]) => {
+      if (key.startsWith('_')) return;
+      if (key === 'benefit' || key === 'e4') {
+        // 체크박스 배열
+        if (Array.isArray(val)) {
+          val.forEach(v => {
+            const cb = document.querySelector(`input[name="${key}"][value="${v}"]`);
+            if (cb) cb.checked = true;
+          });
+        }
+        return;
+      }
+      const el = document.querySelector(`input[name="${key}"], textarea[name="${key}"]`);
+      if (!el) return;
+      if (el.type === 'radio') {
+        const r = document.querySelector(`input[name="${key}"][value="${val}"]`);
+        if (r) r.checked = true;
+      } else {
+        el.value = val;
+      }
+    });
+
+    // 상태 복원
+    if (data._lookupDone) {
+      currentBizNo = data._bizNo;
+      lookupDone = true;
+      document.getElementById('bizNoInput').value = data._bizNo;
+      document.getElementById('dispBizNo').textContent = data._bizNo;
+      document.getElementById('companyArea').classList.add('show');
+      document.getElementById('lookupBox').classList.add('done');
+      document.getElementById('lookupMsg').className = 'msg success';
+      document.getElementById('lookupMsg').textContent = '임시저장 복원됨';
+    }
+    if (data._step && data._step > 1 && data._lookupDone) {
+      goStep(data._step);
+    }
+
+    updateC3Cond();
+    updateG2GBenefit();
+    renderStepBar();
+    updateStep6Btn();
+    if (document.getElementById('e4_6').checked) {
+      document.getElementById('e4OtherBox').classList.add('show');
+    }
+  } catch (e) {
+    console.warn('Draft restore failed:', e);
+  }
+}
+
+// ===== 폼 데이터 수집 =====
+function collectFormData() {
+  const data = {};
+  const form = document.getElementById('surveyForm');
+
+  // text/textarea
+  form.querySelectorAll('input[type="text"], textarea').forEach(el => {
+    if (el.name) data[el.name] = el.value;
+  });
+
+  // radio
+  form.querySelectorAll('input[type="radio"]:checked').forEach(el => {
+    if (el.name) data[el.name] = el.value;
+  });
+
+  // checkbox (배열)
+  const checkGroups = {};
+  form.querySelectorAll('input[type="checkbox"]:checked').forEach(el => {
+    if (!el.name) return;
+    if (!checkGroups[el.name]) checkGroups[el.name] = [];
+    checkGroups[el.name].push(el.value);
+  });
+  Object.entries(checkGroups).forEach(([k, v]) => { data[k] = v; });
+
+  return data;
+}
+
+// ===== 최종 제출 =====
+async function submitSurvey() {
+  // 마지막 단계 필수항목 검사
+  if (!validateStep(currentStep)) return;
+  
+  const confirmed = await showConfirm('설문을 제출하시겠습니까?\n제출 후 수정이 불가합니다.');
+  if (!confirmed) return;
+
+  const raw = collectFormData();
+
+  // DB 저장용 데이터 구성
+  const payload = {
+    biz_no: currentBizNo,
+    company_name: raw.company_name || '',
+    found_year: raw.found_year || '',
+    ceo: raw.ceo || '',
+    industry: raw.industry || '',
+    corp_no: raw.corp_no || '',
+    addr_hq: raw.addr_hq || '',
+    tel_hq: raw.tel_hq || '',
+    fax_hq: raw.fax_hq || '',
+    addr_branch: raw.addr_branch || '',
+    tel_branch: raw.tel_branch || '',
+    fax_branch: raw.fax_branch || '',
+    g2g_flag: raw.g2g_flag || 'NO',
+    benefits: (raw.benefit || []).join(','),
+    writer_name: raw.writer_name || '',
+    writer_dept: raw.writer_dept || '',
+    writer_phone: raw.writer_phone || '',
+    writer_email: raw.writer_email || '',
+    sales_2022: stripNum(raw.sales_2022),
+    sales_2023: stripNum(raw.sales_2023),
+    sales_2024: stripNum(raw.sales_2024),
+    sales_2025: stripNum(raw.sales_2025),
+    export_2022: stripNum(raw.export_2022),
+    export_2023: stripNum(raw.export_2023),
+    export_2024: stripNum(raw.export_2024),
+    export_2025: stripNum(raw.export_2025),
+    capital_2022: stripNum(raw.capital_2022),
+    capital_2023: stripNum(raw.capital_2023),
+    capital_2024: stripNum(raw.capital_2024),
+    capital_2025: stripNum(raw.capital_2025),
+    rnd_2022: stripNum(raw.rnd_2022),
+    rnd_2023: stripNum(raw.rnd_2023),
+    rnd_2024: stripNum(raw.rnd_2024),
+    rnd_2025: stripNum(raw.rnd_2025),
+    emp_2022: stripNum(raw.emp_2022),
+    emp_2023: stripNum(raw.emp_2023),
+    emp_2024: stripNum(raw.emp_2024),
+    emp_2025: stripNum(raw.emp_2025),
+    new_hire_2025: stripNum(raw.new_hire_2025),
+    new_hire_2026: stripNum(raw.new_hire_2026),
+    main_product: raw.main_product || '',
+    main_product_ratio: raw.main_product_ratio || '',
+    c1_1: raw.c1_1 || '', c1_2: raw.c1_2 || '', c1_3: raw.c1_3 || '',
+    c1_4: raw.c1_4 || '', c1_5: raw.c1_5 || '', c1_6: raw.c1_6 || '',
+    c1_7: raw.c1_7 || '', c1_8: raw.c1_8 || '', c1_9: raw.c1_9 || '',
+    c1_10: raw.c1_10 || '', c1_11: raw.c1_11 || '', c1_12: raw.c1_12 || '',
+    c1_13: raw.c1_13 || '',
+    c1_reason: raw.c1_reason || '',
+    c2_1: raw.c2_1 || '', c2_2: raw.c2_2 || '',
+    c2_3: raw.c2_3 || '', c2_4: raw.c2_4 || '',
+    c2_reason: raw.c2_reason || '',
+    c3_retry: raw.c3_retry || '',
+    c3_recommend: raw.c3_recommend || '',
+    c3_retry_reason: raw.c3_retry_reason || '',
+    c3_recommend_reason: raw.c3_recommend_reason || '',
+    c4_suggestion: raw.c4_suggestion || '',
+    d1_sat: raw.d1_sat || '',
+    d2_reason: raw.d2_reason || '',
+    e1_expect: raw.e1_expect || '',
+    e2_need: raw.e2_need || '',
+    e3_participate: raw.e3_participate || '',
+    e4_items: (raw.e4 || []).join(','),
+    e4_other: raw.e4_other || '',
+  };
+
+  try {
+    let error;
+    
+    if (g2gAdditionalMode) {
+      // G2G 추가 입력 모드: 전체 내용 UPDATE (수정 가능)
+      payload.g2g_flag = 'YES'; // G2G로 강제 설정
+      const result = await db.from('responses').update(payload).eq('biz_no', currentBizNo);
+      error = result.error;
+    } else {
+      // 일반 모드: INSERT
+      const result = await db.from('responses').insert([payload]);
+      error = result.error;
+    }
+    
+    if (error) {
+      if (error.code === '23505') {
+        await showAlert('이미 제출된 사업자등록번호입니다.\n중복 제출이 불가합니다.', 'error', '중복 제출');
+      } else {
+        await showAlert('저장 중 오류가 발생했습니다:\n' + error.message, 'error', '저장 오류');
+      }
+      return;
+    }
+
+    localStorage.removeItem('gunsan_survey_draft');
+    const msg = g2gAdditionalMode 
+      ? 'G2G 추가 항목(D, E)이\n성공적으로 저장되었습니다.\n\n감사합니다.' 
+      : '끝까지 응답해 주셔서\n진심으로 감사드립니다.\n\n설문이 성공적으로 저장되었습니다.';
+    await showAlert(msg, 'success', '제출 완료');
+    location.reload();
+  } catch (err) {
+    await showAlert('서버 오류가 발생했습니다.\n다시 시도해 주세요.\n\n' + (err.message || ''), 'error', '서버 오류');
+  }
+}
+
+// ===== 모달 =====
+function showAlert(msg, type = 'success', title = '') {
+  const m = document.getElementById('modal');
+  const icon = document.getElementById('mIcon');
+  const titleEl = document.getElementById('mTitle');
+  const msgEl = document.getElementById('mMsg');
+  const btns = document.getElementById('mBtns');
+
+  icon.className = 'modal-icon ' + (type === 'success' ? 'ok' : type === 'error' ? 'err' : 'ask');
+  icon.textContent = type === 'success' ? '\u2713' : type === 'error' ? '\u2717' : '\u2139';
+  titleEl.textContent = title || (type === 'success' ? '완료' : type === 'error' ? '오류' : '알림');
+  msgEl.textContent = msg;
+  btns.innerHTML = '<button class="modal-btn modal-btn-ok" onclick="closeModal(true)">확인</button>';
+  m.classList.add('show');
+  return new Promise(r => { modalResolve = r; });
+}
+
+function showConfirm(msg, title = '확인') {
+  const m = document.getElementById('modal');
+  document.getElementById('mIcon').className = 'modal-icon ask';
+  document.getElementById('mIcon').textContent = '?';
+  document.getElementById('mTitle').textContent = title;
+  document.getElementById('mMsg').textContent = msg;
+  document.getElementById('mBtns').innerHTML = `
+    <button class="modal-btn modal-btn-cancel" onclick="closeModal(false)">취소</button>
+    <button class="modal-btn modal-btn-ok" onclick="closeModal(true)">확인</button>
+  `;
+  m.classList.add('show');
+  return new Promise(r => { modalResolve = r; });
+}
+
+function closeModal(result) {
+  document.getElementById('modal').classList.remove('show');
+  if (modalResolve) { modalResolve(result); modalResolve = null; }
+}
+</script>
+</body>
+</html>

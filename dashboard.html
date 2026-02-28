@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>설문 응답현황 - 군산 강소특구</title>
+  
+  <!-- PWA 설정 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="군산G2G">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --primary-light: #eef2ff;
+      --accent: #f97316;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --text: #1e293b;
+      --text-light: #475569;
+      --text-muted: #94a3b8;
+      --border: #e2e8f0;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+      --radius: 16px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: linear-gradient(160deg, #eef2ff 0%, #e0e7ff 40%, #c7d2fe 100%);
+      min-height: 100vh;
+      padding: 24px 16px;
+      line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    /* 헤더 */
+    .header {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      color: #fff;
+      padding: 28px 32px;
+      border-radius: var(--radius);
+      margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(79,70,229,0.25);
+    }
+    .header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+    .header p { opacity: 0.9; font-size: 0.9rem; }
+    .header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .btn-back {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-back:hover { background: rgba(255,255,255,0.3); }
+
+    /* 통계 카드 */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(226,232,240,0.8);
+      text-align: center;
+    }
+    .stat-icon { font-size: 2rem; margin-bottom: 8px; }
+    .stat-value { font-size: 2.2rem; font-weight: 700; color: var(--primary); }
+    .stat-label { font-size: 0.85rem; color: var(--text-light); margin-top: 4px; }
+    .stat-card.total .stat-value { color: var(--primary); }
+    .stat-card.g2g .stat-value { color: var(--accent); }
+    .stat-card.general .stat-value { color: var(--success); }
+    .stat-card.today .stat-value { color: var(--warning); }
+    .stat-card.noresponse .stat-value { color: #dc2626; }
+
+    /* 메인 카드 */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(226,232,240,0.8);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .card-header h2 { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+    .card-body { padding: 24px; }
+
+    /* 검색/필터 */
+    .filter-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .search-input {
+      padding: 10px 14px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      width: 240px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: var(--primary); }
+    .filter-select {
+      padding: 10px 14px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: #fff;
+      cursor: pointer;
+      outline: none;
+    }
+    .filter-select:focus { border-color: var(--primary); }
+    .btn-refresh {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-refresh:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,70,229,0.25); }
+    .btn-export {
+      background: var(--success);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-export:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,0.25); }
+
+    /* 테이블 */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    thead th {
+      background: var(--bg);
+      padding: 14px 12px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-light);
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    tbody tr:hover { background: var(--primary-light); }
+    tbody tr:last-child td { border-bottom: none; }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-g2g { background: #fef3c7; color: #92400e; }
+    .badge-general { background: #d1fae5; color: #065f46; }
+    .text-muted { color: var(--text-muted); }
+    .text-center { text-align: center; }
+
+    /* 로딩 */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-light);
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 빈 상태 */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+
+    /* 페이지네이션 */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 24px;
+    }
+    .page-btn {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--text-light);
+      transition: all 0.2s;
+    }
+    .page-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* 상세 보기 */
+    .detail-btn {
+      background: var(--primary-light);
+      color: var(--primary);
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .detail-btn:hover { background: var(--primary); color: #fff; }
+
+    /* 모달 */
+    .modal-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-bg.show { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 16px;
+      max-width: 700px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+      animation: modalIn 0.25s ease-out;
+    }
+    @keyframes modalIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 { font-size: 1.1rem; font-weight: 700; }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 24px; }
+    .detail-section { margin-bottom: 20px; }
+    .detail-section h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--primary-light);
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .detail-item label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .detail-item span {
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    @media (max-width: 768px) {
+      .header { padding: 20px; }
+      .header h1 { font-size: 1.2rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stat-card { padding: 16px; }
+      .stat-value { font-size: 1.6rem; }
+      .card-header { flex-direction: column; align-items: stretch; }
+      .filter-row { flex-direction: column; }
+      .search-input { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="header-row">
+      <div>
+        <h1>📊 설문 응답 현황</h1>
+        <p>군산 강소특구 G2G 프로그램 수혜기업 성과 및 수요조사</p>
+      </div>
+      <button onclick="loadData()" class="btn-back" style="cursor:pointer; min-width:200px; text-align:center; background:#dc2626; border-color:#dc2626; font-size:1rem;">새로고침</button>
+    </div>
+  </div>
+
+  <!-- 통계 카드 -->
+  <div class="stats-grid">
+    <div class="stat-card total">
+      <div class="stat-icon">📋</div>
+      <div id="statTotal" class="stat-value">-</div>
+      <div class="stat-label">전체 응답</div>
+    </div>
+    <div class="stat-card g2g">
+      <div class="stat-icon">🌏</div>
+      <div id="statG2G" class="stat-value">-</div>
+      <div class="stat-label">G2G 참여기업</div>
+    </div>
+    <div class="stat-card general">
+      <div class="stat-icon">🏢</div>
+      <div id="statGeneral" class="stat-value">-</div>
+      <div class="stat-label">일반 수혜기업</div>
+    </div>
+    <div class="stat-card today">
+      <div class="stat-icon">📅</div>
+      <div id="statToday" class="stat-value">-</div>
+      <div class="stat-label">오늘 응답</div>
+    </div>
+    <div class="stat-card noresponse">
+      <div class="stat-icon">⏳</div>
+      <div id="statNoResponse" class="stat-value">-</div>
+      <div class="stat-label">미응답 기업</div>
+    </div>
+  </div>
+
+  <!-- 응답 목록 -->
+  <div class="card">
+    <div class="card-header">
+      <h2>응답 기업 목록</h2>
+      <div class="filter-row">
+        <input type="text" id="searchInput" class="search-input" placeholder="업체명, 사업자번호 검색...">
+        <select id="filterType" class="filter-select">
+          <option value="">전체</option>
+          <option value="YES">G2G 참여기업</option>
+          <option value="NO">일반 수혜기업</option>
+        </select>
+        <button onclick="exportCSV()" class="btn-export">응답 목록 CSV 다운로드</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div id="loading" class="loading">
+        <div class="loading-spinner"></div>
+        <p>데이터를 불러오는 중...</p>
+      </div>
+      <div id="tableWrap" class="table-wrap" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>제출일시</th>
+              <th>사업자번호</th>
+              <th>업체명</th>
+              <th>대표자</th>
+              <th>G2G</th>
+              <th>작성자</th>
+              <th>연락처</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div id="empty" class="empty" style="display:none;">
+        <div class="empty-icon">📭</div>
+        <p>아직 응답이 없습니다.</p>
+      </div>
+      <div id="pagination" class="pagination"></div>
+    </div>
+  </div>
+
+  <!-- 미응답 목록 -->
+  <div class="card" style="margin-top: 24px;">
+    <div class="card-header">
+      <h2>미응답 기업 목록</h2>
+      <div class="filter-row">
+        <input type="text" id="noResponseSearch" class="search-input" placeholder="업체명, 사업자번호 검색...">
+        <button onclick="exportNoResponseCSV()" class="btn-export">미응답 목록 CSV 다운로드</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div id="noResponseLoading" class="loading" style="display:none;">
+        <div class="loading-spinner"></div>
+        <p>데이터를 불러오는 중...</p>
+      </div>
+      <div id="noResponseTableWrap" class="table-wrap" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th>사업자번호</th>
+              <th>업체명</th>
+              <th>대표자</th>
+              <th style="max-width:200px;">본사주소</th>
+              <th>연락처</th>
+              <th>이메일</th>
+            </tr>
+          </thead>
+          <tbody id="noResponseTableBody"></tbody>
+        </table>
+      </div>
+      <div id="noResponseEmpty" class="empty" style="display:none;">
+        <div class="empty-icon">🎉</div>
+        <p>모든 기업이 응답을 완료했습니다!</p>
+      </div>
+      <div id="noResponsePagination" class="pagination"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 상세 모달 -->
+<div id="detailModal" class="modal-bg">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>📄 응답 상세 정보</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div id="detailContent" class="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ===== Supabase 초기화 =====
+const SUPABASE_URL = 'https://qzgleuukeyfyhryjflzd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6Z2xldXVrZXlmeWhyeWpmbHpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxOTc3MDUsImV4cCI6MjA4NDc3MzcwNX0.hn50N_GmTiA8EFM166q0IB8XCjssr_TKtvSMrbikM_Y';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let allData = [];
+let filteredData = [];
+let currentPage = 1;
+const pageSize = 15;
+
+// 미응답 관련
+let allCompanies = [];
+let noResponseData = [];
+let filteredNoResponse = [];
+let noResponsePage = 1;
+
+// ===== 초기화 =====
+document.addEventListener('DOMContentLoaded', () => {
+  loadData();
+  setupSearch();
+});
+
+// ===== 검색/필터 설정 =====
+function setupSearch() {
+  document.getElementById('searchInput').addEventListener('input', debounce(applyFilter, 300));
+  document.getElementById('filterType').addEventListener('change', applyFilter);
+  document.getElementById('noResponseSearch').addEventListener('input', debounce(applyNoResponseFilter, 300));
+}
+
+function debounce(fn, delay) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// ===== 데이터 로드 =====
+async function loadData() {
+  showLoading(true);
+  document.getElementById('noResponseLoading').style.display = 'block';
+  document.getElementById('noResponseTableWrap').style.display = 'none';
+  document.getElementById('noResponseEmpty').style.display = 'none';
+  
+  // 1. 응답 데이터 로드
+  try {
+    const { data: responses, error: respError } = await db
+      .from('responses')
+      .select('*')
+      .order('submitted_at', { ascending: false });
+    
+    if (respError) throw respError;
+    allData = responses || [];
+  } catch (err) {
+    console.error('응답 데이터 로드 오류:', err);
+    allData = [];
+  }
+  
+  // 2. 전체 기업 데이터 로드 (별도 try-catch)
+  try {
+    const { data: companies, error: compError } = await db
+      .from('companies')
+      .select('*')
+      .order('id', { ascending: true });
+    
+    if (compError) throw compError;
+    allCompanies = companies || [];
+  } catch (err) {
+    console.warn('기업 목록 로드 실패 (RLS 정책 확인 필요):', err);
+    allCompanies = [];
+  }
+  
+  // 3. 미응답 기업 계산
+  if (allCompanies.length > 0) {
+    const respondedBizNos = new Set(allData.map(r => r.biz_no));
+    noResponseData = allCompanies.filter(c => !respondedBizNos.has(c.biz_no));
+  } else {
+    noResponseData = [];
+  }
+  
+  // 4. UI 업데이트
+  updateStats();
+  applyFilter();
+  applyNoResponseFilter();
+  
+  showLoading(false);
+  document.getElementById('noResponseLoading').style.display = 'none';
+}
+
+// ===== 통계 업데이트 =====
+function updateStats() {
+  const total = allData.length;
+  const g2g = allData.filter(d => d.g2g_flag === 'YES').length;
+  const general = allData.filter(d => d.g2g_flag !== 'YES').length;
+  
+  // 오늘 날짜 응답 수
+  const today = new Date().toISOString().split('T')[0];
+  const todayCount = allData.filter(d => {
+    if (!d.submitted_at) return false;
+    return d.submitted_at.split('T')[0] === today;
+  }).length;
+  
+  // 미응답 수
+  const noResponseCount = noResponseData.length;
+  
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statG2G').textContent = g2g;
+  document.getElementById('statGeneral').textContent = general;
+  document.getElementById('statToday').textContent = todayCount;
+  document.getElementById('statNoResponse').textContent = noResponseCount;
+}
+
+// ===== 필터 적용 =====
+function applyFilter() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+  const filterType = document.getElementById('filterType').value;
+  
+  filteredData = allData.filter(d => {
+    // G2G 필터
+    if (filterType && d.g2g_flag !== filterType) return false;
+    
+    // 검색어 필터
+    if (searchTerm) {
+      const searchFields = [
+        d.biz_no || '',
+        d.company_name || '',
+        d.ceo || '',
+        d.writer_name || ''
+      ].join(' ').toLowerCase();
+      if (!searchFields.includes(searchTerm)) return false;
+    }
+    
+    return true;
+  });
+  
+  currentPage = 1;
+  renderTable();
+}
+
+// ===== 테이블 렌더링 =====
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  const pagination = document.getElementById('pagination');
+  
+  if (filteredData.length === 0) {
+    document.getElementById('tableWrap').style.display = 'none';
+    document.getElementById('empty').style.display = 'block';
+    pagination.innerHTML = '';
+    return;
+  }
+  
+  document.getElementById('tableWrap').style.display = 'block';
+  document.getElementById('empty').style.display = 'none';
+  
+  // 페이지 계산
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+  const startIdx = (currentPage - 1) * pageSize;
+  const pageData = filteredData.slice(startIdx, startIdx + pageSize);
+  
+  // 테이블 렌더링
+  tbody.innerHTML = pageData.map((d, i) => {
+    const no = filteredData.length - startIdx - i;
+    const dateStr = d.submitted_at ? formatDate(d.submitted_at) : '-';
+    const isG2G = d.g2g_flag === 'YES';
+    
+    return `
+      <tr>
+        <td class="text-muted">${no}</td>
+        <td>${dateStr}</td>
+        <td><strong>${d.biz_no || '-'}</strong></td>
+        <td>${d.company_name || '-'}</td>
+        <td>${d.ceo || '-'}</td>
+        <td><span class="badge ${isG2G ? 'badge-g2g' : 'badge-general'}">${isG2G ? 'G2G' : '일반'}</span></td>
+        <td>${d.writer_name || '-'}</td>
+        <td>${d.writer_phone || '-'}</td>
+        <td><button class="detail-btn" onclick="showDetail(${d.id})">상세</button></td>
+      </tr>
+    `;
+  }).join('');
+  
+  // 페이지네이션
+  renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+  const pagination = document.getElementById('pagination');
+  
+  if (totalPages <= 1) {
+    pagination.innerHTML = '';
+    return;
+  }
+  
+  let html = '';
+  
+  // 이전 버튼
+  html += `<button class="page-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&lt;</button>`;
+  
+  // 페이지 번호
+  const start = Math.max(1, currentPage - 2);
+  const end = Math.min(totalPages, currentPage + 2);
+  
+  if (start > 1) {
+    html += `<button class="page-btn" onclick="goPage(1)">1</button>`;
+    if (start > 2) html += `<button class="page-btn" disabled>...</button>`;
+  }
+  
+  for (let i = start; i <= end; i++) {
+    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  
+  if (end < totalPages) {
+    if (end < totalPages - 1) html += `<button class="page-btn" disabled>...</button>`;
+    html += `<button class="page-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
+  }
+  
+  // 다음 버튼
+  html += `<button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>&gt;</button>`;
+  
+  pagination.innerHTML = html;
+}
+
+function goPage(page) {
+  const totalPages = Math.ceil(filteredData.length / pageSize);
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  renderTable();
+  window.scrollTo({ top: 300, behavior: 'smooth' });
+}
+
+// ===== 상세 보기 =====
+function showDetail(id) {
+  const d = allData.find(item => item.id === id);
+  if (!d) return;
+  
+  const content = document.getElementById('detailContent');
+  
+  content.innerHTML = `
+    <div class="detail-section">
+      <h4>📌 기업 정보</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><label>사업자등록번호</label><span>${d.biz_no || '-'}</span></div>
+        <div class="detail-item"><label>업체명</label><span>${d.company_name || '-'}</span></div>
+        <div class="detail-item"><label>대표자</label><span>${d.ceo || '-'}</span></div>
+        <div class="detail-item"><label>설립년도</label><span>${d.found_year || '-'}</span></div>
+        <div class="detail-item"><label>업종</label><span>${d.industry || '-'}</span></div>
+        <div class="detail-item"><label>법인등록번호</label><span>${d.corp_no || '-'}</span></div>
+        <div class="detail-item"><label>본사주소</label><span>${d.addr_hq || '-'}</span></div>
+        <div class="detail-item"><label>본사전화</label><span>${d.tel_hq || '-'}</span></div>
+      </div>
+    </div>
+    
+    <div class="detail-section">
+      <h4>👤 작성자 정보</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><label>작성자</label><span>${d.writer_name || '-'}</span></div>
+        <div class="detail-item"><label>부서</label><span>${d.writer_dept || '-'}</span></div>
+        <div class="detail-item"><label>연락처</label><span>${d.writer_phone || '-'}</span></div>
+        <div class="detail-item"><label>이메일</label><span>${d.writer_email || '-'}</span></div>
+      </div>
+    </div>
+    
+    <div class="detail-section">
+      <h4>📊 경영현황 (2024년)</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><label>매출액</label><span>${fmtNum(d.sales_2024) || '-'} 백만원</span></div>
+        <div class="detail-item"><label>수출액</label><span>${fmtNum(d.export_2024) || '-'} 백만원</span></div>
+        <div class="detail-item"><label>자본금</label><span>${fmtNum(d.capital_2024) || '-'} 백만원</span></div>
+        <div class="detail-item"><label>연구개발비</label><span>${fmtNum(d.rnd_2024) || '-'} 백만원</span></div>
+        <div class="detail-item"><label>종사자수</label><span>${fmtNum(d.emp_2024) || '-'} 명</span></div>
+        <div class="detail-item"><label>주력제품</label><span>${d.main_product || '-'}</span></div>
+      </div>
+    </div>
+    
+    <div class="detail-section">
+      <h4>⭐ 만족도 (전반적)</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><label>사업추진체계 만족도 (C1-13)</label><span>${d.c1_13 || '-'} / 5</span></div>
+        <div class="detail-item"><label>사업결과 만족도 (C2-1)</label><span>${d.c2_1 || '-'} / 5</span></div>
+        <div class="detail-item"><label>재추진 의향</label><span>${d.c3_retry || '-'} / 5</span></div>
+        <div class="detail-item"><label>추천 의향</label><span>${d.c3_recommend || '-'} / 5</span></div>
+      </div>
+    </div>
+    
+    ${d.g2g_flag === 'YES' ? `
+    <div class="detail-section">
+      <h4>🌏 G2G 만족도 및 수요조사</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><label>G2G 시범사업 만족도</label><span>${d.d1_sat || '-'} / 5</span></div>
+        <div class="detail-item"><label>향후 확대 기대정도</label><span>${d.e1_expect || '-'} / 5</span></div>
+        <div class="detail-item"><label>필요성 인식</label><span>${d.e2_need || '-'} / 5</span></div>
+        <div class="detail-item"><label>참여 의사</label><span>${d.e3_participate || '-'} / 5</span></div>
+      </div>
+    </div>
+    ` : ''}
+    
+    <div class="detail-section">
+      <h4>💬 개선 제안</h4>
+      <div class="detail-item" style="width:100%;">
+        <span style="white-space:pre-wrap; background:#f8fafc; padding:12px; border-radius:8px; display:block;">${d.c4_suggestion || '(없음)'}</span>
+      </div>
+    </div>
+    
+    <div style="text-align:right; margin-top:16px; color:var(--text-muted); font-size:0.8rem;">
+      제출일시: ${d.submitted_at ? formatDate(d.submitted_at) : '-'}
+    </div>
+  `;
+  
+  document.getElementById('detailModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('detailModal').classList.remove('show');
+}
+
+// ===== 미응답 필터 적용 =====
+function applyNoResponseFilter() {
+  // companies 테이블 로드 실패 시
+  if (allCompanies.length === 0) {
+    document.getElementById('noResponseTableWrap').style.display = 'none';
+    document.getElementById('noResponseEmpty').style.display = 'block';
+    document.getElementById('noResponseEmpty').innerHTML = `
+      <div class="empty-icon">⚠️</div>
+      <p>기업 목록을 불러올 수 없습니다.<br><small style="color:#94a3b8;">Supabase companies 테이블의 RLS 정책을 확인하세요.</small></p>
+    `;
+    document.getElementById('noResponsePagination').innerHTML = '';
+    return;
+  }
+  
+  const searchTerm = document.getElementById('noResponseSearch').value.toLowerCase().trim();
+  
+  filteredNoResponse = noResponseData.filter(c => {
+    if (searchTerm) {
+      const searchFields = [
+        c.biz_no || '',
+        c.company_name || '',
+        c.ceo || ''
+      ].join(' ').toLowerCase();
+      if (!searchFields.includes(searchTerm)) return false;
+    }
+    return true;
+  });
+  
+  noResponsePage = 1;
+  renderNoResponseTable();
+}
+
+// ===== 미응답 테이블 렌더링 =====
+function renderNoResponseTable() {
+  const tbody = document.getElementById('noResponseTableBody');
+  const pagination = document.getElementById('noResponsePagination');
+  const emptyEl = document.getElementById('noResponseEmpty');
+  
+  if (filteredNoResponse.length === 0) {
+    document.getElementById('noResponseTableWrap').style.display = 'none';
+    emptyEl.style.display = 'block';
+    emptyEl.innerHTML = `
+      <div class="empty-icon">🎉</div>
+      <p>모든 기업이 응답을 완료했습니다!</p>
+    `;
+    pagination.innerHTML = '';
+    return;
+  }
+  
+  document.getElementById('noResponseTableWrap').style.display = 'block';
+  document.getElementById('noResponseEmpty').style.display = 'none';
+  
+  // 페이지 계산
+  const totalPages = Math.ceil(filteredNoResponse.length / pageSize);
+  const startIdx = (noResponsePage - 1) * pageSize;
+  const pageData = filteredNoResponse.slice(startIdx, startIdx + pageSize);
+  
+  // 테이블 렌더링
+  tbody.innerHTML = pageData.map((c, i) => {
+    const no = filteredNoResponse.length - startIdx - i;
+    return `
+      <tr>
+        <td class="text-muted">${no}</td>
+        <td><strong>${c.biz_no || '-'}</strong></td>
+        <td>${c.company_name || '-'}</td>
+        <td>${c.ceo || '-'}</td>
+        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${c.addr_hq || ''}">${c.addr_hq || '-'}</td>
+        <td>${c.tel_hq || '-'}</td>
+        <td>${c.email || '-'}</td>
+      </tr>
+    `;
+  }).join('');
+  
+  // 페이지네이션
+  renderNoResponsePagination(totalPages);
+}
+
+function renderNoResponsePagination(totalPages) {
+  const pagination = document.getElementById('noResponsePagination');
+  
+  if (totalPages <= 1) {
+    pagination.innerHTML = '';
+    return;
+  }
+  
+  let html = '';
+  
+  html += `<button class="page-btn" onclick="goNoResponsePage(${noResponsePage - 1})" ${noResponsePage === 1 ? 'disabled' : ''}>&lt;</button>`;
+  
+  const start = Math.max(1, noResponsePage - 2);
+  const end = Math.min(totalPages, noResponsePage + 2);
+  
+  if (start > 1) {
+    html += `<button class="page-btn" onclick="goNoResponsePage(1)">1</button>`;
+    if (start > 2) html += `<button class="page-btn" disabled>...</button>`;
+  }
+  
+  for (let i = start; i <= end; i++) {
+    html += `<button class="page-btn ${i === noResponsePage ? 'active' : ''}" onclick="goNoResponsePage(${i})">${i}</button>`;
+  }
+  
+  if (end < totalPages) {
+    if (end < totalPages - 1) html += `<button class="page-btn" disabled>...</button>`;
+    html += `<button class="page-btn" onclick="goNoResponsePage(${totalPages})">${totalPages}</button>`;
+  }
+  
+  html += `<button class="page-btn" onclick="goNoResponsePage(${noResponsePage + 1})" ${noResponsePage === totalPages ? 'disabled' : ''}>&gt;</button>`;
+  
+  pagination.innerHTML = html;
+}
+
+function goNoResponsePage(page) {
+  const totalPages = Math.ceil(filteredNoResponse.length / pageSize);
+  if (page < 1 || page > totalPages) return;
+  noResponsePage = page;
+  renderNoResponseTable();
+}
+
+// ===== 미응답 CSV 내보내기 =====
+function exportNoResponseCSV() {
+  if (filteredNoResponse.length === 0) {
+    alert('내보낼 데이터가 없습니다.');
+    return;
+  }
+  
+  const headers = ['No', '사업자번호', '업체명', '대표자', '설립년도', '본사주소', '본사전화', '이메일'];
+  
+  const rows = filteredNoResponse.map((c, i) => [
+    filteredNoResponse.length - i,
+    c.biz_no || '',
+    c.company_name || '',
+    c.ceo || '',
+    c.found_year || '',
+    c.addr_hq || '',
+    c.tel_hq || '',
+    c.email || ''
+  ]);
+  
+  const csvContent = '\uFEFF' + [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `군산강소특구_미응답기업_${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+}
+
+// ===== CSV 내보내기 =====
+function exportCSV() {
+  if (filteredData.length === 0) {
+    alert('내보낼 데이터가 없습니다.');
+    return;
+  }
+  
+  // CSV 헤더
+  const headers = [
+    '제출일시', '사업자등록번호', '업체명', '대표자', '설립년도', '업종',
+    '본사주소', '본사전화', 'G2G참여', '작성자', '부서', '연락처', '이메일',
+    '매출액_2022', '매출액_2023', '매출액_2024', '매출액_2025',
+    '수출액_2024', '자본금_2024', '연구개발비_2024', '종사자수_2024',
+    '주력제품', '주력제품비중',
+    'C1_전반만족도', 'C2_사업결과만족도', 'C3_재추진의향', 'C3_추천의향',
+    'D1_G2G만족도', 'E1_기대정도', 'E2_필요성', 'E3_참여의사',
+    '개선제안'
+  ];
+  
+  // CSV 데이터
+  const rows = filteredData.map(d => [
+    d.submitted_at ? formatDate(d.submitted_at) : '',
+    d.biz_no || '',
+    d.company_name || '',
+    d.ceo || '',
+    d.found_year || '',
+    d.industry || '',
+    d.addr_hq || '',
+    d.tel_hq || '',
+    d.g2g_flag === 'YES' ? 'G2G' : '일반',
+    d.writer_name || '',
+    d.writer_dept || '',
+    d.writer_phone || '',
+    d.writer_email || '',
+    d.sales_2022 || '',
+    d.sales_2023 || '',
+    d.sales_2024 || '',
+    d.sales_2025 || '',
+    d.export_2024 || '',
+    d.capital_2024 || '',
+    d.rnd_2024 || '',
+    d.emp_2024 || '',
+    d.main_product || '',
+    d.main_product_ratio || '',
+    d.c1_13 || '',
+    d.c2_1 || '',
+    d.c3_retry || '',
+    d.c3_recommend || '',
+    d.d1_sat || '',
+    d.e1_expect || '',
+    d.e2_need || '',
+    d.e3_participate || '',
+    (d.c4_suggestion || '').replace(/\n/g, ' ')
+  ]);
+  
+  // CSV 문자열 생성
+  const csvContent = '\uFEFF' + [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  
+  // 다운로드
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `군산강소특구_설문응답_${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+}
+
+// ===== 유틸 =====
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${day} ${h}:${min}`;
+}
+
+function fmtNum(n) {
+  if (!n) return '';
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function showLoading(show) {
+  document.getElementById('loading').style.display = show ? 'block' : 'none';
+  if (show) {
+    document.getElementById('tableWrap').style.display = 'none';
+    document.getElementById('empty').style.display = 'none';
+  }
+}
+
+// 모달 외부 클릭 시 닫기
+document.getElementById('detailModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ESC 키로 모달 닫기
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ===== PWA Service Worker 등록 =====
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW 등록 완료:', reg.scope))
+      .catch(err => console.log('SW 등록 실패:', err));
+  });
+}
+
+// ===== PWA 설치 프롬프트 =====
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showInstallBanner();
+});
+
+function showInstallBanner() {
+  // 이미 설치된 경우 또는 이미 배너를 닫은 경우 표시 안함
+  if (window.matchMedia('(display-mode: standalone)').matches) return;
+  if (sessionStorage.getItem('pwa_banner_closed')) return;
+  
+  const banner = document.createElement('div');
+  banner.id = 'pwa-banner';
+  banner.innerHTML = `
+    <div style="position:fixed;bottom:20px;left:16px;right:16px;background:linear-gradient(135deg,#1e1b4b,#312e81);color:#fff;padding:20px;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:9998;animation:slideUp 0.4s ease-out;">
+      <button onclick="closeInstallBanner()" style="position:absolute;top:12px;right:12px;background:transparent;border:none;color:#fff;font-size:1.3rem;cursor:pointer;opacity:0.6;line-height:1;padding:4px;">&times;</button>
+      <div style="font-weight:700;font-size:1.1rem;margin-bottom:8px;">📱 앱으로 설치</div>
+      <div style="font-size:0.85rem;opacity:0.85;margin-bottom:16px;">홈 화면에 추가하면 더 빠르게 접속할 수 있어요!</div>
+      <button onclick="installPWA()" style="width:100%;background:#fff;color:#312e81;border:none;padding:14px;border-radius:12px;font-weight:700;font-size:1rem;cursor:pointer;">설치하기</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+  
+  // 애니메이션 스타일 추가
+  if (!document.getElementById('pwa-style')) {
+    const style = document.createElement('style');
+    style.id = 'pwa-style';
+    style.textContent = '@keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}';
+    document.head.appendChild(style);
+  }
+}
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(choice => {
+      if (choice.outcome === 'accepted') {
+        console.log('PWA 설치 완료');
+      }
+      deferredPrompt = null;
+      closeInstallBanner();
+    });
+  }
+}
+
+function closeInstallBanner() {
+  const banner = document.getElementById('pwa-banner');
+  if (banner) banner.remove();
+  sessionStorage.setItem('pwa_banner_closed', 'true');
+}
+</script>
+</body>
+</html>
+
